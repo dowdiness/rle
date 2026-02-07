@@ -7,6 +7,7 @@ pub impl Mergeable for String with can_merge(_a : String, _b : String) -> Bool {
 }
 
 ///|
+/// Merge two strings by concatenation
 pub impl Mergeable for String with merge(a : String, b : String) -> String {
   a + b
 }

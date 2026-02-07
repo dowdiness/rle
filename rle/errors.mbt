@@ -8,9 +8,14 @@ pub(all) suberror InternalError {
 } derive(Show)
 
 ///|
-/// Slice errors when extracting sub-ranges from a run
+/// Slice errors when extracting sub-ranges from a run.
+///
+/// These are raised when a slice lands outside the valid bounds or splits a
+/// UTF-16 surrogate pair (string slicing is done in code units).
 pub(all) suberror SliceError {
+  /// Start/end fall outside the run bounds.
   IndexOutOfBounds
+  /// Start/end split a UTF-16 surrogate pair.
   InvalidIndex
 } derive(Show, Eq)
 
@@ -28,6 +33,7 @@ pub enum RangeIssue {
 pub(all) suberror RleError {
   PositionOutOfBounds(position~ : Int, length~ : Int)
   InvalidRange(start~ : Int, end~ : Int, length~ : Int, reason~ : RangeIssue)
+  /// A slice failed to produce a valid value (e.g., invalid UTF-16 boundary).
   InvalidSlice(reason~ : SliceError)
   Internal(InternalError)
 } derive(Show)

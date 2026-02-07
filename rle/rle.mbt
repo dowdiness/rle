@@ -7,21 +7,25 @@ pub struct Rle[T] {
 } derive(Show, Eq)
 
 ///|
+/// Create an empty Rle with no runs
 pub fn[T] Rle::new() -> Rle[T] {
   { runs: Runs::new(), prefix: None, version: 0 }
 }
 
 ///|
+/// Construct an Rle from an array, merging adjacent runs
 pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
   { runs: Runs::from_array(arr), prefix: None, version: 0 }
 }
 
 ///|
+/// Wrap existing Runs into an Rle with lazy prefix sums
 pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
   { runs, prefix: None, version: 0 }
 }
 
 ///|
+/// Extract the underlying Runs
 pub fn[T] Rle::to_runs(self : Rle[T]) -> Runs[T] {
   self.runs
 }
@@ -58,21 +62,25 @@ fn[T : Spanning] Rle::ensure_prefix(self : Rle[T]) -> PrefixSums {
 }
 
 ///|
+/// Check if the Rle contains no runs
 pub fn[T] Rle::is_empty(self : Rle[T]) -> Bool {
   self.runs.is_empty()
 }
 
 ///|
+/// Number of runs
 pub fn[T] Rle::count(self : Rle[T]) -> Int {
   self.runs.count()
 }
 
 ///|
+/// Get run at index (0-indexed)
 pub fn[T] Rle::get(self : Rle[T], index : Int) -> T? {
   self.runs.get(index)
 }
 
 ///|
+/// Iterate over all runs
 pub fn[T] Rle::iter(self : Rle[T]) -> Iter[T] {
   self.runs.iter()
 }

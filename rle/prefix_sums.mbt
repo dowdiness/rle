@@ -6,6 +6,7 @@ pub(all) struct PrefixSums {
 } derive(Show, Eq)
 
 ///|
+/// Create an empty prefix sum table.
 pub fn PrefixSums::new() -> PrefixSums {
   { spans: [], content: [] }
 }
@@ -35,7 +36,7 @@ pub fn PrefixSums::count(self : PrefixSums) -> Int {
 }
 
 ///|
-/// Get span offset at run index (end of run i)
+/// Get span offset at run index (end of run i) with bounds checking.
 pub fn PrefixSums::span_at(self : PrefixSums, index : Int) -> Int? {
   if index < 0 || index >= self.spans.length() {
     None

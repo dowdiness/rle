@@ -3,6 +3,7 @@
 pub struct Runs[T](Array[T]) derive(Show, Eq)
 
 ///|
+/// Create an empty Runs with no elements
 pub fn[T] Runs::new() -> Runs[T] {
   Runs([])
 }
@@ -38,21 +39,25 @@ pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
 }
 
 ///|
+/// Construct Runs from an array, merging adjacent elements
 pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
   Runs::from_array_batch(arr)
 }
 
 ///|
+/// Check if there are no runs
 pub fn[T] Runs::is_empty(self : Runs[T]) -> Bool {
   self.0.is_empty()
 }
 
 ///|
+/// Number of runs
 pub fn[T] Runs::count(self : Runs[T]) -> Int {
   self.0.length()
 }
 
 ///|
+/// Get run at index (0-indexed), returns None if out of bounds
 pub fn[T] Runs::get(self : Runs[T], index : Int) -> T? {
   if index < 0 || index >= self.0.length() {
     None
@@ -62,11 +67,13 @@ pub fn[T] Runs::get(self : Runs[T], index : Int) -> T? {
 }
 
 ///|
+/// Iterate over all runs
 pub fn[T] Runs::iter(self : Runs[T]) -> Iter[T] {
   self.0.iter()
 }
 
 ///|
+/// Copy runs into a new array
 pub fn[T] Runs::to_array(self : Runs[T]) -> Array[T] {
   self.0.copy()
 }
