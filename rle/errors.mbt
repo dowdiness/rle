@@ -8,6 +8,13 @@ pub(all) suberror InternalError {
 } derive(Show)
 
 ///|
+/// Slice errors when extracting sub-ranges from a run
+pub(all) suberror SliceError {
+  IndexOutOfBounds
+  InvalidIndex
+} derive(Show, Eq)
+
+///|
 /// Why a range is invalid
 pub enum RangeIssue {
   NegativeStart
@@ -21,6 +28,7 @@ pub enum RangeIssue {
 pub(all) suberror RleError {
   PositionOutOfBounds(position~ : Int, length~ : Int)
   InvalidRange(start~ : Int, end~ : Int, length~ : Int, reason~ : RangeIssue)
+  InvalidSlice(reason~ : SliceError)
   Internal(InternalError)
 } derive(Show)
 
@@ -60,6 +68,13 @@ pub impl Show for ErrorMessage with output(self, logger) {
           logger.write_string(
             "Range end (\{end}) exceeds document length (\{length})",
           )
+      }
+    InvalidSlice(reason~) =>
+      match reason {
+        IndexOutOfBounds =>
+          logger.write_string("Slice indices are out of bounds")
+        InvalidIndex =>
+          logger.write_string("Slice indices are not on valid boundaries")
       }
     Internal(_) =>
       logger.write_string(

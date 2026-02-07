@@ -83,8 +83,13 @@ pub impl @qc.Shrink for Runs[String] with shrink(runs) {
         if i == j {
           let half = item_len / 2
           if half > 0 {
-            let _ = shortened.append(Sliceable::slice(item, start=0, end=half))
+            match Sliceable::slice(item, start=0, end=half) {
+              Ok(slice) => {
+                let _ = shortened.append(slice)
 
+              }
+              Err(_) => ()
+            }
           }
         } else {
           let _ = shortened.append(items[j])
@@ -229,8 +234,11 @@ pub impl @qc.Shrink for Slice[String] with shrink(slice) {
   }
   // Shrink value (keep range valid)
   if value_len > slice.end {
-    let new_value = Sliceable::slice(slice.value, start=0, end=slice.end)
-    results.push({ value: new_value, start: slice.start, end: slice.end })
+    match Sliceable::slice(slice.value, start=0, end=slice.end) {
+      Ok(new_value) =>
+        results.push({ value: new_value, start: slice.start, end: slice.end })
+      Err(_) => ()
+    }
   }
   results.iter()
 }

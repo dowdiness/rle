@@ -22,9 +22,14 @@ fn prop_slice_merge_roundtrip(text : String) -> Bool {
     return true
   }
   let k = len / 2
-  let left = @rle.Sliceable::slice(text, start=0, end=k)
-  let right = @rle.Sliceable::slice(text, start=k, end=len)
-  @rle.Mergeable::merge(left, right) == text
+  match @rle.Sliceable::slice(text, start=0, end=k) {
+    Ok(left) =>
+      match @rle.Sliceable::slice(text, start=k, end=len) {
+        Ok(right) => @rle.Mergeable::merge(left, right) == text
+        Err(_) => false
+      }
+    Err(_) => false
+  }
 }
 
 ///|
@@ -46,8 +51,7 @@ test "property: span is non-negative" {
 ///|
 /// Property: content_len <= span
 fn prop_content_len_bounded(text : String) -> Bool {
-  @rle.Spanning::content_len(text) <=
-  @rle.Spanning::span(text)
+  @rle.Spanning::content_len(text) <= @rle.Spanning::span(text)
 }
 
 ///|
@@ -59,7 +63,10 @@ test "property: content_len <= span" {
 /// Property: full slice equals original
 fn prop_full_slice_identity(text : String) -> Bool {
   let len = @rle.Spanning::span(text)
-  @rle.Sliceable::slice(text, start=0, end=len) == text
+  match @rle.Sliceable::slice(text, start=0, end=len) {
+    Ok(value) => value == text
+    Err(_) => false
+  }
 }
 
 ///|
@@ -110,7 +117,7 @@ test "property: split preserves total length" {
 ///|
 /// Property: Rle find matches Runs find
 fn prop_rle_find_matches_runs(text : String) -> Bool {
-  let len = text.iter().count()
+  let len = @rle.Spanning::span(text)
   if len == 0 {
     return true
   }
@@ -152,7 +159,7 @@ test "property: concat is associative" {
 ///|
 /// Property: split and concat are inverses
 fn prop_split_concat_roundtrip(text : String) -> Bool {
-  let len = text.iter().count()
+  let len = @rle.Spanning::span(text)
   if len == 0 {
     return true
   }
@@ -196,7 +203,7 @@ test "property: no adjacent mergeable runs" {
 ///|
 /// Property: range covers exactly the requested range
 fn prop_range_coverage(text : String) -> Bool {
-  let len = text.iter().count()
+  let len = @rle.Spanning::span(text)
   if len < 2 {
     return true
   }
@@ -207,7 +214,10 @@ fn prop_range_coverage(text : String) -> Bool {
     Ok(iter) => {
       let slices = iter.collect()
       let total_len = slices.fold(init=0, fn(acc, slice) {
-        acc + @rle.Spanning::span(slice.to_inner())
+        match slice.to_inner() {
+          Ok(value) => acc + @rle.Spanning::span(value)
+          Err(_) => acc
+        }
       })
       total_len == end - start
     }

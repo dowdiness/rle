@@ -38,7 +38,10 @@ right.to_string()  //=> " world"
 
 // Range iteration returns slices without copying
 let slices = rle.range(start=1, end=4).unwrap().collect()
-slices[0].to_inner()  //=> "ell"
+match slices[0].to_inner() {
+  Ok(value) => value  //=> "ell"
+  Err(_) => ""
+}
 ```
 
 ### Batch Construction
@@ -180,6 +183,17 @@ match rle.split(100) {
   Ok((left, right)) => ...
   Err(e) => println(e.message())
   //=> "Position 100 is outside the document (length: 11)"
+}
+```
+
+Slice extraction can now fail if a string slice lands on an invalid UTF-16
+boundary. These failures surface as `InvalidSlice`:
+
+```moonbit
+match runs.split(1) {
+  Ok(_) => ...
+  Err(e) => println(e.message())
+  //=> "Slice indices are not on valid boundaries"
 }
 ```
 

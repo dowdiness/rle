@@ -10,6 +10,6 @@ pub struct Slice[T] {
 /// Extracts the actual sliced value from this view.
 ///
 /// Returns the portion of `value` from `start` to `end`.
-pub fn[T : Sliceable] Slice::to_inner(self : Slice[T]) -> T {
+pub fn[T : Sliceable] Slice::to_inner(self : Slice[T]) -> Result[T, RleError] {
   T::slice(self.value, start=self.start, end=self.end)
 }

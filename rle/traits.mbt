@@ -23,7 +23,7 @@ pub(open) trait Mergeable {
 /// Uses half-open interval [start, end) — start is inclusive, end is exclusive.
 /// Example: slice("hello", start=1, end=4) → "ell"
 pub(open) trait Sliceable {
-  slice(Self, start~ : Int, end~ : Int) -> Self
+  slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
 }
 
 ///|

@@ -38,9 +38,7 @@ pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
 }
 
 ///|
-pub fn[T : Mergeable + Spanning] Runs::from_array(
-  arr : Array[T],
-) -> Runs[T] {
+pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
   Runs::from_array_batch(arr)
 }
 
@@ -316,15 +314,23 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
     } else {
       let offset = pos - cur
       if offset > 0 {
-        match left.append(T::slice(item, start=0, end=offset)) {
+        match T::slice(item, start=0, end=offset) {
+          Ok(slice) =>
+            match left.append(slice) {
+              Err(e) => return Err(e)
+              Ok(_) => ()
+            }
           Err(e) => return Err(e)
-          Ok(_) => ()
         }
       }
       if offset < run_len {
-        match right.append(T::slice(item, start=offset, end=run_len)) {
+        match T::slice(item, start=offset, end=run_len) {
+          Ok(slice) =>
+            match right.append(slice) {
+              Err(e) => return Err(e)
+              Ok(_) => ()
+            }
           Err(e) => return Err(e)
-          Ok(_) => ()
         }
       }
     }

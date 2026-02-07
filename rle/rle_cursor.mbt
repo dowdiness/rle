@@ -66,10 +66,7 @@ pub fn[T : Spanning] RleCursor::at_end(self : RleCursor[T]) -> Bool {
 
 ///|
 /// Advance by n positions (returns false if stale)
-pub fn[T : Spanning] RleCursor::advance(
-  self : RleCursor[T],
-  n : Int,
-) -> Bool {
+pub fn[T : Spanning] RleCursor::advance(self : RleCursor[T], n : Int) -> Bool {
   if self.is_stale() {
     return false
   }
@@ -104,10 +101,7 @@ pub fn[T : Spanning] RleCursor::advance(
 
 ///|
 /// Retreat by n positions (returns false if stale)
-pub fn[T : Spanning] RleCursor::retreat(
-  self : RleCursor[T],
-  n : Int,
-) -> Bool {
+pub fn[T : Spanning] RleCursor::retreat(self : RleCursor[T], n : Int) -> Bool {
   if self.is_stale() {
     return false
   }
@@ -134,9 +128,7 @@ pub fn[T : Spanning] RleCursor::retreat(
         break
       }
       self.run_index = self.run_index - 1
-      self.offset_in_run = Spanning::span(
-        self.rle.runs.0[self.run_index],
-      )
+      self.offset_in_run = Spanning::span(self.rle.runs.0[self.run_index])
     }
   }
   true
@@ -144,10 +136,7 @@ pub fn[T : Spanning] RleCursor::retreat(
 
 ///|
 /// Seek to absolute position (returns false if stale)
-pub fn[T : Spanning] RleCursor::seek(
-  self : RleCursor[T],
-  pos : Int,
-) -> Bool {
+pub fn[T : Spanning] RleCursor::seek(self : RleCursor[T], pos : Int) -> Bool {
   if self.is_stale() {
     return false
   }

@@ -82,7 +82,10 @@ test "Rle::range full range" {
     Ok(iter) => {
       let slices = iter.collect()
       inspect(slices.length(), content="1")
-      inspect(slices[0].to_inner(), content="hello")
+      match slices[0].to_inner() {
+        Ok(value) => inspect(value, content="hello")
+        Err(_) => fail("slice should succeed")
+      }
     }
     Err(_) => fail("range should succeed")
   }
@@ -95,7 +98,10 @@ test "Rle::range partial range" {
     Ok(iter) => {
       let slices = iter.collect()
       inspect(slices.length(), content="1")
-      inspect(slices[0].to_inner(), content="ell")
+      match slices[0].to_inner() {
+        Ok(value) => inspect(value, content="ell")
+        Err(_) => fail("slice should succeed")
+      }
     }
     Err(_) => fail("range should succeed")
   }
@@ -125,7 +131,10 @@ test "Rle::range_clamped clamps bounds" {
   let rle = @rle.Rle::from_string("hello")
   let slices = rle.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
-  inspect(slices[0].to_inner(), content="hello")
+  match slices[0].to_inner() {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("slice should succeed")
+  }
 }
 
 ///|
@@ -212,6 +221,27 @@ test "Rle unicode handling" {
   let rle = @rle.Rle::from_string("こんにちは")
   inspect(rle.len(), content="5")
   inspect(rle.find(2), content="Some({run: 0, offset: 2})")
+}
+
+///|
+test "Rle range honors code unit indices" {
+  let rle = @rle.Rle::from_string("A🤣B")
+  match rle.range(start=0, end=3) {
+    Ok(iter) => {
+      let slices = iter.collect()
+      inspect(slices.length(), content="1")
+      match slices[0].to_inner() {
+        Ok(value) => {
+          inspect(value.length(), content="3")
+          inspect(value.unsafe_get(0), content="65")
+          inspect(value.unsafe_get(1), content="55358")
+          inspect(value.unsafe_get(2), content="56611")
+        }
+        Err(_) => fail("slice should succeed")
+      }
+    }
+    Err(_) => fail("range should succeed")
+  }
 }
 
 ///|

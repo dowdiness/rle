@@ -12,9 +12,7 @@ pub fn[T] Rle::new() -> Rle[T] {
 }
 
 ///|
-pub fn[T : Mergeable + Spanning] Rle::from_array(
-  arr : Array[T],
-) -> Rle[T] {
+pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
   { runs: Runs::from_array(arr), prefix: None, version: 0 }
 }
 
@@ -151,9 +149,9 @@ pub fn[T : Spanning] Rle::range(
   guard start_pos is Some(sp) else { return Ok(Iter::empty()) }
   let result : Array[Slice[T]] = []
   let mut i = sp.run
+  let mut prefix = sums.span_before(i)
   while i < self.runs.0.length() {
     let item = self.runs.0[i]
-    let prefix = sums.span_before(i)
     let item_end = sums.spans[i]
     if item_end > start && prefix < end {
       let slice_start = if prefix < start { start - prefix } else { 0 }
@@ -167,6 +165,7 @@ pub fn[T : Spanning] Rle::range(
     if item_end >= end {
       break
     }
+    prefix = item_end
     i = i + 1
   }
   Ok(result.iter())

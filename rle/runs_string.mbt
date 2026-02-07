@@ -18,9 +18,23 @@ pub impl HasLength for String with length(self : String) -> Int {
 }
 
 ///|
-/// String implements Spanning - span = content_len = char count
+/// String implements Spanning - span = content_len = UTF-16 code unit count
 pub impl Spanning for String with content_len(self : String) -> Int {
   self.length()
+}
+
+///|
+/// String helper that uses view slicing with explicit error handling.
+pub fn slice_string_view(
+  text : String,
+  start~ : Int,
+  end~ : Int,
+) -> Result[String, @builtin.CreatingViewError] {
+  try text[start:end] catch {
+    err => Err(err)
+  } noraise {
+    view => Ok(view.to_string())
+  }
 }
 
 ///|
@@ -29,16 +43,18 @@ pub impl Sliceable for String with slice(
   self : String,
   start~ : Int,
   end~ : Int,
-) -> String {
-  self
-  .iter()
-  .drop(start)
-  .take(end - start)
-  .fold(init=StringBuilder::new(), fn(sb, c) {
-    sb.write_char(c)
-    sb
-  })
-  .to_string()
+) -> Result[String, RleError] {
+  // Keep slicing consistent with length()/span indexing (UTF-16 code units).
+  match slice_string_view(self, start~, end~) {
+    Ok(value) => Ok(value)
+    Err(err) =>
+      match err {
+        @builtin.IndexOutOfBounds =>
+          Err(RleError::InvalidSlice(reason=SliceError::IndexOutOfBounds))
+        @builtin.InvalidIndex =>
+          Err(RleError::InvalidSlice(reason=SliceError::InvalidIndex))
+      }
+  }
 }
 
 ///|

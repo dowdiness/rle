@@ -71,7 +71,10 @@ test "Runs::range full range" {
     Ok(iter) => {
       let slices = iter.collect()
       inspect(slices.length(), content="1")
-      inspect(slices[0].to_inner(), content="hello")
+      match slices[0].to_inner() {
+        Ok(value) => inspect(value, content="hello")
+        Err(_) => fail("slice should succeed")
+      }
     }
     Err(_) => fail("range should succeed")
   }
@@ -84,7 +87,10 @@ test "Runs::range partial range" {
     Ok(iter) => {
       let slices = iter.collect()
       inspect(slices.length(), content="1")
-      inspect(slices[0].to_inner(), content="ell")
+      match slices[0].to_inner() {
+        Ok(value) => inspect(value, content="ell")
+        Err(_) => fail("slice should succeed")
+      }
     }
     Err(_) => fail("range should succeed")
   }
@@ -114,7 +120,10 @@ test "Runs::range_clamped clamps bounds" {
   let runs = @rle.Runs::from_string("hello")
   let slices = runs.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
-  inspect(slices[0].to_inner(), content="hello")
+  match slices[0].to_inner() {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("slice should succeed")
+  }
 }
 
 ///|
@@ -228,6 +237,22 @@ test "Runs unicode split" {
 }
 
 ///|
+test "Runs slice with surrogate pairs uses code unit indices" {
+  let runs = @rle.Runs::from_string("A🤣B")
+  match runs.split(3) {
+    Ok((left, right)) => {
+      inspect(left.to_string().length(), content="3")
+      inspect(left.to_string().unsafe_get(0), content="65")
+      inspect(left.to_string().unsafe_get(1), content="55358")
+      inspect(left.to_string().unsafe_get(2), content="56611")
+      inspect(right.to_string().length(), content="1")
+      inspect(right.to_string().unsafe_get(0), content="66")
+    }
+    Err(_) => fail("split should use code unit indices")
+  }
+}
+
+///|
 test "Runs::prefix_sums builds correct sums" {
   let runs = @rle.Runs::from_string("hello")
   let sums = runs.prefix_sums()
@@ -243,5 +268,15 @@ test "Runs::find_fast matches find" {
     let slow = runs.find(i)
     let fast = runs.find_fast(sums, i)
     inspect(slow == fast, content="true")
+  }
+}
+
+///|
+test "Runs split surrogate pair" {
+  let s = "😀" // len 2
+  let runs = @rle.Runs::from_string(s)
+  match runs.split(1) {
+    Ok(_) => fail("split should fail on invalid boundary")
+    Err(err) => inspect(err, content="InvalidSlice(reason=InvalidIndex)")
   }
 }
