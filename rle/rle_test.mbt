@@ -439,6 +439,241 @@ test "Rle::get_version increments on mutation" {
 
 // ============== Phase 3: Batch Construction Tests ==============
 
+// ============== value_at tests ==============
+
+///|
+test "Rle::value_at middle position" {
+  let rle = @rle.Rle::from_string("hello")
+  match rle.value_at(2) {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("value_at should succeed")
+  }
+}
+
+///|
+test "Rle::value_at start position" {
+  let rle = @rle.Rle::from_string("hello")
+  match rle.value_at(0) {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("value_at(0) should succeed")
+  }
+}
+
+///|
+test "Rle::value_at last position" {
+  let rle = @rle.Rle::from_string("hello")
+  match rle.value_at(4) {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("value_at(4) should succeed")
+  }
+}
+
+///|
+test "Rle::value_at out of bounds" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.value_at(5) is Err(_), content="true")
+  inspect(rle.value_at(-1) is Err(_), content="true")
+}
+
+///|
+test "Rle::value_at empty rle" {
+  let rle : @rle.Rle[String] = @rle.Rle::new()
+  inspect(rle.value_at(0) is Err(_), content="true")
+}
+
+// ============== insert tests ==============
+
+///|
+test "Rle::insert at middle" {
+  let rle = @rle.Rle::from_string("helo")
+  let elem = @rle.Rle::from_string("ll")
+  match rle.insert(2, elem) {
+    Ok(result) => {
+      inspect(result.to_string(), content="helllo")
+      inspect(result.len(), content="6")
+    }
+    Err(_) => fail("insert should succeed")
+  }
+}
+
+///|
+test "Rle::insert at start (prepend)" {
+  let rle = @rle.Rle::from_string("world")
+  let elem = @rle.Rle::from_string("hello ")
+  match rle.insert(0, elem) {
+    Ok(result) => inspect(result.to_string(), content="hello world")
+    Err(_) => fail("insert(0) should succeed")
+  }
+}
+
+///|
+test "Rle::insert at end (append)" {
+  let rle = @rle.Rle::from_string("hello")
+  let elem = @rle.Rle::from_string(" world")
+  match rle.insert(5, elem) {
+    Ok(result) => inspect(result.to_string(), content="hello world")
+    Err(_) => fail("insert(len) should succeed")
+  }
+}
+
+///|
+test "Rle::insert out of bounds" {
+  let rle = @rle.Rle::from_string("hello")
+  let elem = @rle.Rle::from_string("x")
+  inspect(rle.insert(10, elem) is Err(_), content="true")
+  inspect(rle.insert(-1, elem) is Err(_), content="true")
+}
+
+///|
+test "Rle::insert empty element" {
+  let rle = @rle.Rle::from_string("hello")
+  let elem : @rle.Rle[String] = @rle.Rle::new()
+  match rle.insert(2, elem) {
+    Ok(result) => inspect(result.to_string(), content="hello")
+    Err(_) => fail("inserting empty should succeed")
+  }
+}
+
+// ============== delete tests ==============
+
+///|
+test "Rle::delete middle" {
+  let rle = @rle.Rle::from_string("hello world")
+  match rle.delete(start=5, end=6) {
+    Ok(result) => inspect(result.to_string(), content="helloworld")
+    Err(_) => fail("delete should succeed")
+  }
+}
+
+///|
+test "Rle::delete from start" {
+  let rle = @rle.Rle::from_string("hello world")
+  match rle.delete(start=0, end=6) {
+    Ok(result) => inspect(result.to_string(), content="world")
+    Err(_) => fail("delete from start should succeed")
+  }
+}
+
+///|
+test "Rle::delete to end" {
+  let rle = @rle.Rle::from_string("hello world")
+  match rle.delete(start=5, end=11) {
+    Ok(result) => inspect(result.to_string(), content="hello")
+    Err(_) => fail("delete to end should succeed")
+  }
+}
+
+///|
+test "Rle::delete empty range" {
+  let rle = @rle.Rle::from_string("hello")
+  match rle.delete(start=2, end=2) {
+    Ok(result) => inspect(result.to_string(), content="hello")
+    Err(_) => fail("delete empty range should succeed")
+  }
+}
+
+///|
+test "Rle::delete all" {
+  let rle = @rle.Rle::from_string("hello")
+  match rle.delete(start=0, end=5) {
+    Ok(result) => {
+      inspect(result.is_empty(), content="true")
+      inspect(result.len(), content="0")
+    }
+    Err(_) => fail("delete all should succeed")
+  }
+}
+
+///|
+test "Rle::delete invalid range" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.delete(start=-1, end=3) is Err(_), content="true")
+  inspect(rle.delete(start=0, end=-1) is Err(_), content="true")
+  inspect(rle.delete(start=4, end=2) is Err(_), content="true")
+  inspect(rle.delete(start=0, end=10) is Err(_), content="true")
+}
+
+///|
+test "Rle::delete at surrogate pair boundary returns error" {
+  let rle = @rle.Rle::from_string("A😀B") // len 4
+  match rle.delete(start=2, end=3) {
+    Ok(_) => fail("delete at surrogate boundary should fail")
+    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  }
+}
+
+///|
+test "Rle::delete empty range at surrogate pair boundary returns error" {
+  let rle = @rle.Rle::from_string("😀") // len 2, position 1 is inside the pair
+  match rle.delete(start=1, end=1) {
+    Ok(_) => fail("empty delete at surrogate boundary should fail")
+    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  }
+}
+
+// ============== splice tests ==============
+
+///|
+test "Rle::splice replace middle" {
+  let rle = @rle.Rle::from_string("hello world")
+  let replacement = @rle.Rle::from_string("beautiful ")
+  match rle.splice(start=6, end=11, replacement) {
+    Ok(result) => inspect(result.to_string(), content="hello beautiful ")
+    Err(_) => fail("splice should succeed")
+  }
+}
+
+///|
+test "Rle::splice insert (empty range)" {
+  let rle = @rle.Rle::from_string("helloworld")
+  let replacement = @rle.Rle::from_string(" ")
+  match rle.splice(start=5, end=5, replacement) {
+    Ok(result) => inspect(result.to_string(), content="hello world")
+    Err(_) => fail("splice with empty range should succeed")
+  }
+}
+
+///|
+test "Rle::splice delete (empty replacement)" {
+  let rle = @rle.Rle::from_string("hello world")
+  let replacement : @rle.Rle[String] = @rle.Rle::new()
+  match rle.splice(start=5, end=6, replacement) {
+    Ok(result) => inspect(result.to_string(), content="helloworld")
+    Err(_) => fail("splice with empty replacement should succeed")
+  }
+}
+
+///|
+test "Rle::splice replace all" {
+  let rle = @rle.Rle::from_string("hello")
+  let replacement = @rle.Rle::from_string("world")
+  match rle.splice(start=0, end=5, replacement) {
+    Ok(result) => inspect(result.to_string(), content="world")
+    Err(_) => fail("splice all should succeed")
+  }
+}
+
+///|
+test "Rle::splice invalid range" {
+  let rle = @rle.Rle::from_string("hello")
+  let replacement = @rle.Rle::from_string("x")
+  inspect(rle.splice(start=-1, end=3, replacement) is Err(_), content="true")
+  inspect(rle.splice(start=4, end=2, replacement) is Err(_), content="true")
+  inspect(rle.splice(start=0, end=10, replacement) is Err(_), content="true")
+}
+
+///|
+test "Rle::splice at surrogate pair boundary returns error" {
+  let rle = @rle.Rle::from_string("A😀B") // len 4
+  let replacement = @rle.Rle::from_string("x")
+  match rle.splice(start=2, end=3, replacement) {
+    Ok(_) => fail("splice at surrogate boundary should fail")
+    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  }
+}
+
+// ============== Phase 3: Batch Construction Tests ==============
+
 ///|
 test "Runs::from_array_batch produces same result as from_array" {
   let arr = ["a", "b", "c", "d", "e"]

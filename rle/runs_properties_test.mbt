@@ -264,3 +264,109 @@ fn prop_concat_preserves_len(pair : (Array[String], Array[String])) -> Bool {
 test "property: concat preserves total length" {
   @qc.quick_check_fn(prop_concat_preserves_len)
 }
+
+///|
+/// Property: insert preserves length - original.len() + elem.len() == result.len()
+fn prop_insert_preserves_len(pair : (String, String)) -> Bool {
+  let (text, elem_text) = pair
+  let rle = @rle.Rle::from_string(text)
+  let elem = @rle.Rle::from_string(elem_text)
+  let total = rle.len()
+  if total == 0 {
+    match rle.insert(0, elem) {
+      Ok(result) => result.len() == elem.len()
+      Err(_) => false
+    }
+  } else {
+    let pos = total / 2
+    match rle.insert(pos, elem) {
+      Ok(result) => result.len() == total + elem.len()
+      Err(_) => false
+    }
+  }
+}
+
+///|
+test "property: insert preserves length" {
+  @qc.quick_check_fn(prop_insert_preserves_len)
+}
+
+///|
+/// Property: delete preserves length - original.len() - (end - start) == result.len()
+fn prop_delete_preserves_len(text : String) -> Bool {
+  let rle = @rle.Rle::from_string(text)
+  let total = rle.len()
+  if total < 2 {
+    return true
+  }
+  let start = total / 4
+  let end = total / 4 + total / 2
+  match rle.delete(start~, end~) {
+    Ok(result) => result.len() == total - (end - start)
+    Err(_) => false
+  }
+}
+
+///|
+test "property: delete preserves length" {
+  @qc.quick_check_fn(prop_delete_preserves_len)
+}
+
+///|
+/// Property: splice length - original.len() - (end - start) + replacement.len() == result.len()
+fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
+  let (text, replacement_text) = pair
+  let rle = @rle.Rle::from_string(text)
+  let replacement = @rle.Rle::from_string(replacement_text)
+  let total = rle.len()
+  if total < 2 {
+    return true
+  }
+  let start = total / 4
+  let end = total / 4 + total / 2
+  match rle.splice(start~, end~, replacement) {
+    Ok(result) =>
+      result.len() == total - (end - start) + replacement.len()
+    Err(_) => false
+  }
+}
+
+///|
+test "property: splice preserves length" {
+  @qc.quick_check_fn(prop_splice_preserves_len)
+}
+
+///|
+/// Property: splice(s, e, r) == delete(s, e) then insert(s, r)
+fn prop_splice_equals_delete_insert(pair : (String, String)) -> Bool {
+  let (text, replacement_text) = pair
+  let total = @rle.Spanning::span(text)
+  if total < 2 {
+    return true
+  }
+  let start = total / 4
+  let end = total / 4 + total / 2
+  let replacement = @rle.Rle::from_string(replacement_text)
+  // splice approach
+  let rle1 = @rle.Rle::from_string(text)
+  let splice_result = match rle1.splice(start~, end~, replacement) {
+    Ok(r) => r.to_string()
+    Err(_) => return false
+  }
+  // delete then insert approach
+  let rle2 = @rle.Rle::from_string(text)
+  let delete_insert_result = match rle2.delete(start~, end~) {
+    Ok(deleted) =>
+      match deleted.insert(start, @rle.Rle::from_string(replacement_text)) {
+        Ok(r) => r.to_string()
+        Err(_) => return false
+      }
+    Err(_) => return false
+  }
+  splice_result == delete_insert_result
+}
+
+///|
+test "property: splice equals delete then insert" {
+  @qc.quick_check_fn(prop_splice_equals_delete_insert)
+}

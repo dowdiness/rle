@@ -411,3 +411,130 @@ pub fn[T : Mergeable + Spanning] Runs::extend(
     self.0.push(cur)
   }
 }
+
+///|
+/// Get the run containing span position `pos` - O(n) linear scan
+pub fn[T : Spanning] Runs::value_at(
+  self : Runs[T],
+  pos : Int,
+) -> Result[T, RleError] {
+  let total = self.len()
+  if pos < 0 || pos >= total {
+    return Err(RleError::PositionOutOfBounds(position=pos, length=total))
+  }
+  match self.find(pos) {
+    Some(rp) =>
+      match self.get(rp.run) {
+        Some(value) => Ok(value)
+        None =>
+          Err(
+            RleError::Internal(
+              InternalError::InvalidState(
+                detail="find returned invalid run index",
+              ),
+            ),
+          )
+      }
+    None =>
+      Err(
+        RleError::Internal(
+          InternalError::InvalidState(
+            detail="find returned None for valid position",
+          ),
+        ),
+      )
+  }
+}
+
+///|
+/// Insert runs at span position `pos`, returning a new Runs
+pub fn[T : Sliceable + Spanning + Mergeable] Runs::insert(
+  self : Runs[T],
+  pos : Int,
+  elem : Runs[T],
+) -> Result[Runs[T], RleError] {
+  match self.split(pos) {
+    Ok((left, right)) => Ok(left.concat(elem).concat(right))
+    Err(e) => Err(e)
+  }
+}
+
+///|
+/// Delete the range [start, end), returning a new Runs
+pub fn[T : Sliceable + Spanning + Mergeable] Runs::delete(
+  self : Runs[T],
+  start~ : Int,
+  end~ : Int,
+) -> Result[Runs[T], RleError] {
+  let total = self.len()
+  if start < 0 {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
+    )
+  }
+  if end < 0 {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=NegativeEnd),
+    )
+  }
+  if start > end {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=StartAfterEnd),
+    )
+  }
+  if end > total {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=ExceedsLength),
+    )
+  }
+  // Validate boundary even for empty ranges (e.g. surrogate pair interior)
+  let (left, rest) = match self.split(start) {
+    Ok(pair) => pair
+    Err(e) => return Err(e)
+  }
+  let (_, right) = match rest.split(end - start) {
+    Ok(pair) => pair
+    Err(e) => return Err(e)
+  }
+  Ok(left.concat(right))
+}
+
+///|
+/// Replace the range [start, end) with `replacement`, returning a new Runs
+pub fn[T : Sliceable + Spanning + Mergeable] Runs::splice(
+  self : Runs[T],
+  start~ : Int,
+  end~ : Int,
+  replacement : Runs[T],
+) -> Result[Runs[T], RleError] {
+  let total = self.len()
+  if start < 0 {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
+    )
+  }
+  if end < 0 {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=NegativeEnd),
+    )
+  }
+  if start > end {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=StartAfterEnd),
+    )
+  }
+  if end > total {
+    return Err(
+      RleError::InvalidRange(start~, end~, length=total, reason=ExceedsLength),
+    )
+  }
+  let (left, rest) = match self.split(start) {
+    Ok(pair) => pair
+    Err(e) => return Err(e)
+  }
+  let (_, right) = match rest.split(end - start) {
+    Ok(pair) => pair
+    Err(e) => return Err(e)
+  }
+  Ok(left.concat(replacement).concat(right))
+}

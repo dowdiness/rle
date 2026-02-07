@@ -246,3 +246,78 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
     self.invalidate()
   }
 }
+
+///|
+/// Get the run containing span position `pos` - O(log n) with cache
+pub fn[T : Spanning] Rle::value_at(
+  self : Rle[T],
+  pos : Int,
+) -> Result[T, RleError] {
+  let sums = self.ensure_prefix()
+  let total = sums.len()
+  if pos < 0 || pos >= total {
+    return Err(RleError::PositionOutOfBounds(position=pos, length=total))
+  }
+  match self.runs.find_fast(sums, pos) {
+    Some(rp) =>
+      match self.runs.get(rp.run) {
+        Some(value) => Ok(value)
+        None =>
+          Err(
+            RleError::Internal(
+              InternalError::InvalidState(
+                detail="find returned invalid run index",
+              ),
+            ),
+          )
+      }
+    None =>
+      Err(
+        RleError::Internal(
+          InternalError::InvalidState(
+            detail="find returned None for valid position",
+          ),
+        ),
+      )
+  }
+}
+
+///|
+/// Insert an Rle at span position `pos`, returning a new Rle
+pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(
+  self : Rle[T],
+  pos : Int,
+  elem : Rle[T],
+) -> Result[Rle[T], RleError] {
+  match self.runs.insert(pos, elem.runs) {
+    Ok(runs) => Ok(Rle::from_runs(runs))
+    Err(e) => Err(e)
+  }
+}
+
+///|
+/// Delete the range [start, end), returning a new Rle
+pub fn[T : Sliceable + Spanning + Mergeable] Rle::delete(
+  self : Rle[T],
+  start~ : Int,
+  end~ : Int,
+) -> Result[Rle[T], RleError] {
+  match self.runs.delete(start~, end~) {
+    Ok(runs) => Ok(Rle::from_runs(runs))
+    Err(e) => Err(e)
+  }
+}
+
+///|
+/// Replace the range [start, end) with `replacement`, returning a new Rle
+pub fn[T : Sliceable + Spanning + Mergeable] Rle::splice(
+  self : Rle[T],
+  start~ : Int,
+  end~ : Int,
+  replacement : Rle[T],
+) -> Result[Rle[T], RleError] {
+  match self.runs.splice(start~, end~, replacement.runs) {
+    Ok(runs) => Ok(Rle::from_runs(runs))
+    Err(e) => Err(e)
+  }
+}
