@@ -1,86 +1,53 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-Generic run-length encoding (RLE) library written in MoonBit. Provides compressed sequence storage with O(log n) position lookup via lazy cached prefix sums. Designed for use cases like CRDTs, gap buffers, and text editors where runs of similar elements are common.
+RLE library in MoonBit — compressed sequences with O(log n) lookup via lazy prefix sums. For detailed type/file reference see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Build Commands
 
 ```bash
-# Type check
-moon check
-
-# Run all tests
-moon test
-
-# Run tests with output (useful for debugging)
-moon test --package rle
-
-# Run benchmarks (release mode required for meaningful results)
-moon bench --package rle --release
-
-# Build
-moon build
-
-# Update dependencies
-moon update
+moon check            # Type check
+moon test             # Run all tests
+moon test --package rle        # Tests with output
+moon bench --package rle --release  # Benchmarks (release mode required)
+moon build            # Build
+moon update           # Update dependencies
 ```
 
-All code lives in the single `rle/` package. There is no multi-package workspace.
+All code lives in `rle/` — single package, no sub-packages.
 
-## Architecture
+## Architecture Rules
 
-### Core Types (layered bottom-up)
+**Layering is strict and bottom-up.** Dependencies flow downward only:
+Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No upward or circular deps.
 
-1. **Traits** (`traits.mbt`) — Four traits define the generic interface:
-   - `Mergeable`: Can two adjacent runs combine? (`can_merge` + `merge`)
-   - `Sliceable`: Extract sub-range via `slice(start~, end~)`
-   - `HasLength`: Basic `length`
-   - `Spanning: HasLength`: Dual-length semantics — `span` (index space, includes tombstones/gaps) vs `content_len` (visible payload). For plain text, both are equal.
+**Runs invariant: no adjacent mergeable runs.** Every mutation must restore this via `normalize_tail()` (append) or stack-merge loop (concat/extend/from_array_batch). Never mutate the internal array without normalization.
 
-2. **Runs[T]** (`runs.mbt`) — Core array of mergeable runs. Maintains the invariant that no two adjacent runs are mergeable. Key operations:
-   - `from_array_batch`: Single-pass stack-merge construction
-   - `append`: O(1) amortized with tail normalization
-   - `find` / `find_fast`: Linear scan or binary search (with prefix sums)
-   - `split`, `concat`, `extend`, `range`
+**Rle mutations must invalidate + version-bump.** Always call both `self.invalidate()` and `self.bump_version()`. Omitting either breaks cache consistency or cursor staleness detection.
 
-3. **Rle[T]** (`rle.mbt`) — Wraps `Runs[T]` with lazy prefix sum cache. Adds:
-   - `version`: Monotonic mutation counter for cursor staleness detection
-   - `prefix: PrefixSums?`: `None` = stale, rebuilt on-demand via `ensure_prefix()`
-   - All mutating methods call `invalidate()` + `bump_version()`
+**Trait impls in dedicated files.** `String` → `runs_string.mbt`. New types → `runs_<typename>.mbt`.
 
-4. **PrefixSums** (`prefix_sums.mbt`) — Cumulative span/content arrays enabling O(log n) binary search in `find_fast`.
+**Test file conventions.** `*_test.mbt` (blackbox), `*_wbtest.mbt` (whitebox), `*_properties_test.mbt` (QuickCheck), `*_benchmark.mbt`. Don't mix blackbox and whitebox.
 
-5. **RleCursor[T]** (`rle_cursor.mbt`) — Sequential traversal cursor. Captures version at creation; returns `MayStale[T]` (`T?`) to signal when underlying data has mutated.
+**Error handling: Result-based, no panics.** Public APIs return `Result[T, RleError]`. Use `PositionOutOfBounds`, `InvalidRange`, `InvalidSlice` for user errors; `Internal` for invariant violations. Never `abort`/`panic` on user input.
 
-6. **Slice[T]** (`slice.mbt`) — Lazy view into a run with bounds. `to_inner()` materializes the slice only when needed.
+## Known Mistakes
 
-### Supporting Files
+**Breaking merge cascade.** Don't add early returns before `normalize_tail()` or reorder the pop-merge-push loop. After changes to append/concat/extend/from_array_batch, run whitebox tests (`runs_wbtest.mbt`).
 
-- `errors.mbt` — `RleError` enum with `PositionOutOfBounds`, `InvalidRange`, `Internal` variants
-- `run_pos.mbt` — `RunPos` struct returned by `find` (run index + offset within run)
-- `runs_string.mbt` — `Mergeable + Sliceable + Spanning` implementations for `String`
-- `arbitrary.mbt` — QuickCheck `Arbitrary` generators for property-based testing
+**Forgetting bump_version.** Every `invalidate()` call must pair with `bump_version()`. Copy the pattern from `append()`.
 
-### Key Design Decisions
+**String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. Wrap string view slicing in try/catch converting `@builtin.InvalidIndex` → `RleError::InvalidSlice`. Test with "😀" (2 units) and "A😀B" (4 units).
 
-- **Lazy invalidation**: Prefix sums are only rebuilt when queried after mutation, not on every mutation.
-- **Dual-length (`span` vs `content_len`)**: Supports CRDT tombstones and gap buffers where structural size differs from visible size.
-- **Stack-based batch merge**: `from_array_batch` uses a cascading merge loop instead of repeated normalize calls.
-- **Cursor staleness**: Cursors capture the Rle version at creation and conservatively signal staleness rather than silently returning wrong data.
+**Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend silently skip.
 
-### Test Structure
+**Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `len()`, `content_len()`, `range()`.
 
-- `rle_test.mbt` — Blackbox tests for `Rle` public API
-- `runs_test.mbt` — Blackbox tests for `Runs` public API
-- `runs_properties_test.mbt` — QuickCheck property-based tests (merge associativity, slice round-trips, span invariants)
-- `runs_wbtest.mbt` — Whitebox tests accessing internal `runs.0` array for invariant checks
-- `rle_benchmark.mbt` — Performance benchmarks for range iteration, concat, extend, construction
+**Split-then-concat run count.** Round-trip may change run count — this is expected. Don't assert on run count after split+concat.
 
-### Dependencies
+## Constraints
 
-- `moonbitlang/quickcheck` (0.9.9) — Property-based testing
-- `moonbitlang/core/bench` — Benchmarking framework
-- `moonbitlang/core/quickcheck` — Core QuickCheck integration
+**Performance.** `Rle::find()` must use O(log n) binary search. Prefix sums are lazy — never rebuild inside mutations. `from_array_batch()` must stay O(n) single-pass. Benchmarks require `--release`.
+
+**Safety.** No panics on user input — always `Result`. Bounds-check new direct array access patterns. Stale cursors return `None`, never wrong data.
+
+**Cost.** Single package, minimal deps (`moonbitlang/quickcheck`, core bench). Keep property test generators bounded and test suite fast.
