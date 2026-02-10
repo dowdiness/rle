@@ -84,3 +84,122 @@ All code lives in the single `rle/` package. There is no multi-package workspace
 - `moonbitlang/quickcheck` (0.9.9) — Property-based testing
 - `moonbitlang/core/bench` — Benchmarking framework
 - `moonbitlang/core/quickcheck` — Core QuickCheck integration
+
+## Architecture Rules
+
+These rules define how code is structured in this project. Follow them for all changes.
+
+### Layering is strict and bottom-up
+
+Types depend only on layers below them. The dependency order is:
+
+1. Traits (`traits.mbt`) — no internal dependencies
+2. Errors (`errors.mbt`) — no internal dependencies
+3. Runs (`runs.mbt`) — depends on traits, errors
+4. PrefixSums (`prefix_sums.mbt`) — depends on traits
+5. Rle (`rle.mbt`) — depends on Runs, PrefixSums
+6. RleCursor (`rle_cursor.mbt`) — depends on Rle
+7. Slice (`slice.mbt`) — depends on traits
+
+Do not introduce upward or circular dependencies. Runs must never import Rle. PrefixSums must never import Runs.
+
+### One package, one directory
+
+All code lives in `rle/`. Do not create sub-packages or a multi-package workspace. New types and functions go into existing files by layer, or into a new file at the appropriate layer.
+
+### Invariant maintenance through controlled mutation
+
+`Runs[T]` enforces the invariant that no two adjacent runs satisfy `can_merge()`. Every function that modifies the run array must restore this invariant before returning. The pattern is:
+- `append()` calls `normalize_tail()` which cascades merges backward
+- `concat()` and `extend()` use the same stack-merge loop as `from_array_batch()`
+- `split()` constructs new Runs via `append()`, inheriting normalization
+
+Never mutate the internal array directly without calling normalization afterward.
+
+### Rle mutations must invalidate and version-bump
+
+Every mutating method on `Rle[T]` must call both `self.invalidate()` (sets `prefix = None`) and `self.bump_version()` (increments version counter). Doing only one breaks either cache consistency or cursor staleness detection.
+
+### Trait implementations go in dedicated files
+
+`String` trait impls live in `runs_string.mbt`. New type impls (e.g., for a custom CRDT element) should follow the same pattern: `runs_<typename>.mbt`.
+
+### Test file naming conventions
+
+- `*_test.mbt` — blackbox tests using public API only
+- `*_wbtest.mbt` — whitebox tests that access internal fields (e.g., `runs.0`)
+- `*_properties_test.mbt` — QuickCheck property-based tests
+- `*_benchmark.mbt` — benchmarks (run with `--release`)
+
+Do not mix blackbox and whitebox tests in the same file.
+
+### Error handling is Result-based, never panics on user input
+
+All fallible public operations return `Result[T, RleError]`. Internal invariant violations use `RleError::Internal`. User input errors use `PositionOutOfBounds`, `InvalidRange`, or `InvalidSlice`. Never use `abort` or `panic` for conditions reachable from public API input.
+
+## Known Mistakes
+
+Common errors AI assistants make when modifying this codebase, and how to avoid them.
+
+### Breaking the merge cascade in append or concat
+
+**Mistake**: Refactoring `append()` or `concat()` in a way that skips `normalize_tail()` or breaks the stack-merge while loop. For example, adding an early return before normalization, or reordering the pop-merge-push sequence in `concat()`.
+
+**Fix**: After any change to `append()`, `concat()`, `extend()`, or `from_array_batch()`, run the whitebox test `runs_wbtest.mbt` which checks that no adjacent mergeable runs exist. The stack-merge loop must pop from the tail, merge into `cur`, and continue — not break after one merge.
+
+### Forgetting bump_version when adding new Rle mutations
+
+**Mistake**: Adding a new mutating method to `Rle` that calls `invalidate()` but forgets `bump_version()`, or vice versa.
+
+**Fix**: Search for all calls to `invalidate()` — every one must be paired with `bump_version()`. When adding a new mutating method, copy the pattern from `append()`:
+```
+self.invalidate()
+self.bump_version()
+```
+
+### Treating string indices as character offsets
+
+**Mistake**: Assuming `slice(start~, end~)` operates on character indices. MoonBit strings are UTF-16; indices are code unit positions. Slicing at a surrogate pair boundary (e.g., position 1 of "😀") causes `@builtin.InvalidIndex`.
+
+**Fix**: The `String` impl in `runs_string.mbt` wraps string view slicing in a try/catch that converts `@builtin.InvalidIndex` to `RleError::InvalidSlice`. Any new string operations must do the same. Test with multi-code-unit characters like "😀" (2 code units) and "A😀B" (4 code units).
+
+### Skipping zero-span element rejection
+
+**Mistake**: Adding a new construction path that doesn't check `T::span(elem) <= 0`, allowing zero-length runs into the array. This violates the core invariant and causes infinite loops in `find()`.
+
+**Fix**: Every entry point that adds elements to Runs must reject elements where `span <= 0`. `append()` returns an error; `from_array_batch()`, `concat()`, and `extend()` silently skip. Follow the existing pattern for the operation type.
+
+### Accessing prefix sums without ensuring they exist
+
+**Mistake**: Using `self.prefix` directly in Rle methods without calling `ensure_prefix()` first, causing a `None` dereference when the cache is stale.
+
+**Fix**: Always call `self.ensure_prefix()` before accessing `self.prefix`. The `find()`, `len()`, `content_len()`, and `range()` methods on Rle all demonstrate this pattern.
+
+### Creating adjacent duplicate runs via split-then-concat
+
+**Mistake**: Splitting a Runs at a position and concatenating back together, expecting identical output. The split may produce partial runs at the boundary that merge differently when re-combined.
+
+**Fix**: This is expected behavior, not a bug. Property tests verify that split-then-concat preserves total content and length, but the number of runs may differ. Do not write assertions on run count after round-trip operations.
+
+## Constraints
+
+Security, performance, and cost limits for this project.
+
+### Performance constraints
+
+- **O(log n) position lookup is required**: `Rle::find()` must use binary search via prefix sums, not linear scan. The `Runs::find()` linear scan exists only as a fallback for contexts without cached prefix sums.
+- **Prefix sums are lazy, not eager**: Never rebuild prefix sums inside a mutating method. They are rebuilt on-demand by read methods via `ensure_prefix()`. Eager rebuilding would make bulk mutations (e.g., repeated `append()`) O(n²).
+- **Batch construction must be O(n)**: `from_array_batch()` uses a single-pass stack merge. Do not replace it with repeated `append()` calls, which would degrade to O(n²) in the worst case due to cascading normalization.
+- **Benchmarks require `--release` mode**: Debug builds do not produce meaningful performance numbers. Always run `moon bench --package rle --release`.
+
+### Safety constraints
+
+- **No panics on user input**: All public API methods must return `Result` for error cases. `abort` and `panic` are only acceptable for internal invariant violations that indicate bugs in this library.
+- **Bounds checking before array access**: Binary search and range iteration use direct array indexing for performance. These paths must be proven safe by loop invariants. Add bounds checks when introducing new direct-access patterns.
+- **Cursor staleness is conservative**: A stale cursor returns `None` / stops iteration rather than returning potentially wrong data. Never weaken this guarantee (e.g., by making stale cursors continue with cached data).
+
+### Cost constraints
+
+- **Single-package design**: This is a focused library. Do not introduce build complexity (sub-packages, code generation, external tooling) unless absolutely required.
+- **Minimal dependencies**: Only `moonbitlang/quickcheck` and core bench are used. Do not add dependencies without clear justification.
+- **Tests must stay fast**: Property-based tests use bounded generators. Do not increase generator sizes without verifying test suite runtime stays under a few seconds.
