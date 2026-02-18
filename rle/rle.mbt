@@ -92,9 +92,9 @@ pub fn[T : Spanning] Rle::len(self : Rle[T]) -> Int {
 }
 
 ///|
-/// Total content length - O(1) with cache
-pub fn[T : Spanning] Rle::content_len(self : Rle[T]) -> Int {
-  self.ensure_prefix().content_len()
+/// Total logical length - O(1) with cache
+pub fn[T : Spanning] Rle::logical_length(self : Rle[T]) -> Int {
+  self.ensure_prefix().logical_length()
 }
 
 ///|

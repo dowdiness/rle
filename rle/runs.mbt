@@ -85,9 +85,9 @@ pub fn[T : Spanning] Runs::len(self : Runs[T]) -> Int {
 }
 
 ///|
-/// Total content length - O(n)
-pub fn[T : Spanning] Runs::content_len(self : Runs[T]) -> Int {
-  self.0.fold(init=0, fn(acc, item) { acc + T::content_len(item) })
+/// Total logical length - O(n)
+pub fn[T : Spanning] Runs::logical_length(self : Runs[T]) -> Int {
+  self.0.fold(init=0, fn(acc, item) { acc + T::logical_length(item) })
 }
 
 ///|
@@ -210,7 +210,7 @@ pub fn[T : Spanning] Runs::prefix_sums(self : Runs[T]) -> PrefixSums {
   let mut content_sum = 0
   for item in self.0 {
     span_sum = span_sum + T::span(item)
-    content_sum = content_sum + T::content_len(item)
+    content_sum = content_sum + T::logical_length(item)
     spans.push(span_sum)
     content.push(content_sum)
   }

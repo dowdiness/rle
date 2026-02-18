@@ -46,9 +46,9 @@ test "Rle::len returns total span length (cached)" {
 }
 
 ///|
-test "Rle::content_len returns total content length (cached)" {
+test "Rle::logical_length returns total logical length (cached)" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.content_len(), content="5")
+  inspect(rle.logical_length(), content="5")
 }
 
 ///|

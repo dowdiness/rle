@@ -49,14 +49,14 @@ test "property: span is non-negative" {
 }
 
 ///|
-/// Property: content_len <= span
-fn prop_content_len_bounded(text : String) -> Bool {
-  @rle.Spanning::content_len(text) <= @rle.Spanning::span(text)
+/// Property: logical_length <= span
+fn prop_logical_length_bounded(text : String) -> Bool {
+  @rle.Spanning::logical_length(text) <= @rle.Spanning::span(text)
 }
 
 ///|
-test "property: content_len <= span" {
-  @qc.quick_check_fn(prop_content_len_bounded)
+test "property: logical_length <= span" {
+  @qc.quick_check_fn(prop_logical_length_bounded)
 }
 
 ///|

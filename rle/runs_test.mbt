@@ -44,9 +44,9 @@ test "Runs::len returns total span length" {
 }
 
 ///|
-test "Runs::content_len returns total content length" {
+test "Runs::logical_length returns total logical length" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.content_len(), content="5")
+  inspect(runs.logical_length(), content="5")
 }
 
 ///|

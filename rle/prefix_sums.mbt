@@ -21,8 +21,8 @@ pub fn PrefixSums::len(self : PrefixSums) -> Int {
 }
 
 ///|
-/// Total content length - O(1)
-pub fn PrefixSums::content_len(self : PrefixSums) -> Int {
+/// Total logical length - O(1)
+pub fn PrefixSums::logical_length(self : PrefixSums) -> Int {
   match self.content.last() {
     Some(total) => total
     None => 0
