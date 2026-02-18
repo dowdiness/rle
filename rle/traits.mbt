@@ -32,6 +32,15 @@ pub(open) trait Sliceable {
 /// Basic length for a value.
 pub(open) trait HasLength {
   length(Self) -> Int
+
+  /// Returns true if length is zero
+  is_empty(Self) -> Bool = _
+}
+
+///|
+/// Default is_empty delegates to length.
+impl HasLength with is_empty(self) {
+  self.length() == 0
 }
 
 ///|
@@ -40,28 +49,26 @@ pub(open) trait HasLength {
 /// Many data structures need two different notions of "length":
 ///
 /// - `span`: The total size in the position/index space.
-///   This is the space used for indexing and lookups.
 ///   Always positive; includes all elements regardless of state.
-///   Think: "how many slots does this occupy in the index space?"
 ///
-/// - `content_len`: The size of the useful/visible payload.
-///   May be less than `span` if some elements are hidden, filtered, or deleted.
-///   Think: "how much content is actually meaningful to the consumer?"
-///
-/// Examples:
-/// - In a CRDT: span = structural length (incl. tombstones),
-///   content_len = visible length (excl. tombstones)
-/// - In a gap buffer: span = total (incl. gap), content_len = actual text
-/// - In plain text: span = content_len = character count
+/// - `logical_length`: The size of the useful/visible payload.
+///   May be less than `span` if some elements are hidden or deleted.
+///   Defaults to `span()` — override when logical size differs.
 ///
 /// Note: `span` defaults to `HasLength::length` unless overridden.
 pub(open) trait Spanning: HasLength {
   span(Self) -> Int = _
-  content_len(Self) -> Int
+  logical_length(Self) -> Int = _
 }
 
 ///|
 /// Default span delegates to plain length.
 impl Spanning with span(self) {
   HasLength::length(self)
+}
+
+///|
+/// Default logical_length delegates to span.
+impl Spanning with logical_length(self) {
+  self.span()
 }
