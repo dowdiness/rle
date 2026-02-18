@@ -62,15 +62,15 @@ fn[T : Spanning] Rle::ensure_prefix(self : Rle[T]) -> PrefixSums {
 }
 
 ///|
-/// Check if the Rle contains no runs
-pub fn[T] Rle::is_empty(self : Rle[T]) -> Bool {
-  self.runs.is_empty()
+/// HasLength impl — number of runs
+pub impl[T] HasLength for Rle[T] with length(self : Rle[T]) -> Int {
+  self.runs.length()
 }
 
 ///|
-/// Number of runs
-pub fn[T] Rle::count(self : Rle[T]) -> Int {
-  self.runs.count()
+/// HasLength impl — is_empty
+pub impl[T] HasLength for Rle[T] with is_empty(self : Rle[T]) -> Bool {
+  self.runs.is_empty()
 }
 
 ///|
@@ -86,14 +86,14 @@ pub fn[T] Rle::iter(self : Rle[T]) -> Iter[T] {
 }
 
 ///|
-/// Total span length - O(1) with cache
-pub fn[T : Spanning] Rle::len(self : Rle[T]) -> Int {
-  self.ensure_prefix().len()
+/// Spanning impl — total span, O(1) with cache
+pub impl[T : Spanning] Spanning for Rle[T] with span(self : Rle[T]) -> Int {
+  self.ensure_prefix().span()
 }
 
 ///|
-/// Total logical length - O(1) with cache
-pub fn[T : Spanning] Rle::logical_length(self : Rle[T]) -> Int {
+/// Spanning impl — logical content length, O(1) with cache
+pub impl[T : Spanning] Spanning for Rle[T] with logical_length(self : Rle[T]) -> Int {
   self.ensure_prefix().logical_length()
 }
 
@@ -128,7 +128,7 @@ pub fn[T : Spanning] Rle::range(
   end~ : Int,
 ) -> Result[Iter[Slice[T]], RleError] {
   let sums = self.ensure_prefix()
-  let total = sums.len()
+  let total = sums.span()
   if start < 0 {
     return Err(
       RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
@@ -186,7 +186,7 @@ pub fn[T : Spanning] Rle::range_clamped(
   start~ : Int,
   end~ : Int,
 ) -> Iter[Slice[T]] {
-  let total = self.len()
+  let total = self.span()
   let s = if start < 0 { 0 } else { start }
   let e = if end > total { total } else { end }
   if s >= e {
@@ -238,10 +238,10 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
   if other.runs.is_empty() {
     return
   }
-  let old_count = self.runs.count()
+  let old_count = self.runs.length()
   self.runs.extend(other.runs)
   // Only bump version if actual mutation occurred
-  if self.runs.count() != old_count || old_count > 0 {
+  if self.runs.length() != old_count || old_count > 0 {
     self.bump_version()
     self.invalidate()
   }
@@ -254,7 +254,7 @@ pub fn[T : Spanning] Rle::value_at(
   pos : Int,
 ) -> Result[T, RleError] {
   let sums = self.ensure_prefix()
-  let total = sums.len()
+  let total = sums.span()
   if pos < 0 || pos >= total {
     return Err(RleError::PositionOutOfBounds(position=pos, length=total))
   }
