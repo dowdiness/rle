@@ -704,3 +704,34 @@ test "Runs::from_array_batch handles all empty elements" {
   let runs = @rle.Runs::from_array_batch(arr)
   inspect(runs.is_empty(), content="true")
 }
+
+///|
+test "HasLength::is_empty - empty Rle" {
+  let rle : @rle.Rle[String] = @rle.Rle::new()
+  inspect(rle.is_empty(), content="true")
+}
+
+///|
+test "HasLength::is_empty - non-empty Rle" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.is_empty(), content="false")
+}
+
+///|
+fn[T : @rle.HasLength] check_empty(x : T) -> Bool {
+  x.is_empty()
+}
+
+///|
+test "HasLength::is_empty via generic constraint" {
+  let empty : @rle.Rle[String] = @rle.Rle::new()
+  let nonempty = @rle.Rle::from_string("hi")
+  inspect(check_empty(empty), content="true")
+  inspect(check_empty(nonempty), content="false")
+}
+
+///|
+test "Spanning::logical_length default - equals span for String" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.logical_length() == rle.span(), content="true")
+}
