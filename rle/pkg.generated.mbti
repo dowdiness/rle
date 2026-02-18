@@ -49,13 +49,14 @@ pub impl Show for ErrorMessage
 pub(all) struct PrefixSums {
   spans : Array[Int]
   content : Array[Int]
+
+  fn new() -> PrefixSums
 }
-pub fn PrefixSums::length(Self) -> Int
-pub fn PrefixSums::logical_length(Self) -> Int
 pub fn PrefixSums::new() -> Self
-pub fn PrefixSums::span(Self) -> Int
 pub fn PrefixSums::span_at(Self, Int) -> Int?
 pub fn PrefixSums::span_before(Self, Int) -> Int
+pub impl HasLength for PrefixSums
+pub impl Spanning for PrefixSums
 pub impl Eq for PrefixSums
 pub impl Show for PrefixSums
 pub impl @moonbitlang/core/quickcheck.Arbitrary for PrefixSums
@@ -74,6 +75,8 @@ pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums?
   mut version : Int
+
+  fn[T] new() -> Rle[T]
 }
 pub fn[T : Mergeable + Spanning] Rle::append(Self[T], T) -> Result[Unit, RleError]
 pub fn[T] Rle::clear(Self[T]) -> Unit
@@ -148,6 +151,7 @@ pub fn[T] Runs::find_fast(Self[T], PrefixSums, Int) -> RunPos?
 pub fn[T : Mergeable + Spanning] Runs::from_array(Array[T]) -> Self[T]
 pub fn[T : Mergeable + Spanning] Runs::from_array_batch(Array[T]) -> Self[T]
 pub fn Runs::from_string(String) -> Self[String]
+#alias("_[_]")
 pub fn[T] Runs::get(Self[T], Int) -> T?
 #deprecated
 pub fn[T] Runs::inner(Self[T]) -> Array[T]

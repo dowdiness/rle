@@ -3,6 +3,8 @@
 pub(all) struct PrefixSums {
   spans : Array[Int] // cumulative span lengths
   content : Array[Int] // cumulative content lengths
+
+  fn new() -> PrefixSums
 } derive(Show, Eq)
 
 ///|
@@ -13,7 +15,7 @@ pub fn PrefixSums::new() -> PrefixSums {
 
 ///|
 /// Total span length - O(1)
-pub fn PrefixSums::span(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with span(self : PrefixSums) -> Int {
   match self.spans.last() {
     Some(total) => total
     None => 0
@@ -22,7 +24,7 @@ pub fn PrefixSums::span(self : PrefixSums) -> Int {
 
 ///|
 /// Total logical length - O(1)
-pub fn PrefixSums::logical_length(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with logical_length(self : PrefixSums) -> Int {
   match self.content.last() {
     Some(total) => total
     None => 0
@@ -31,7 +33,7 @@ pub fn PrefixSums::logical_length(self : PrefixSums) -> Int {
 
 ///|
 /// Number of runs
-pub fn PrefixSums::length(self : PrefixSums) -> Int {
+pub impl HasLength for PrefixSums with length(self : PrefixSums) -> Int {
   self.spans.length()
 }
 

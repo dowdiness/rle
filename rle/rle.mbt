@@ -4,6 +4,8 @@ pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums? // None = stale, needs rebuild
   mut version : Int // Monotonically increasing mutation counter
+
+  fn[T] new() -> Rle[T]
 } derive(Show, Eq)
 
 ///|
