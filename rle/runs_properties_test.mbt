@@ -183,7 +183,6 @@ fn prop_no_adjacent_mergeable(strings : Array[String]) -> Bool {
   for s in strings {
     if s.iter().count() > 0 {
       let _ = runs.append(s)
-
     }
   }
   let items = runs.to_array()
@@ -325,8 +324,7 @@ fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
   let start = total / 4
   let end = total / 4 + total / 2
   match rle.splice(start~, end~, replacement) {
-    Ok(result) =>
-      result.len() == total - (end - start) + replacement.len()
+    Ok(result) => result.len() == total - (end - start) + replacement.len()
     Err(_) => false
   }
 }
