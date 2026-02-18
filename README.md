@@ -105,8 +105,8 @@ pub impl @rle.HasLength for MyRun with length(self) {
   self.text.length()
 }
 
-pub impl @rle.Spanning for MyRun with logical_length(self) {
-  self.text.length()  // for plain content, same as length
+pub impl @rle.Spanning for MyRun with span(self) {
+  self.text.length()  // satisfies Spanning; logical_length defaults to span()
 }
 
 // Optional: Sliceable (needed for split and range iteration)

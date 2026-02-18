@@ -735,3 +735,21 @@ test "Spanning::logical_length default - equals span for String" {
   let rle = @rle.Rle::from_string("hello")
   inspect(rle.logical_length() == rle.span(), content="true")
 }
+
+///|
+test "HasLength::is_empty - empty Runs" {
+  let runs : @rle.Runs[String] = @rle.Runs::new()
+  inspect(runs.is_empty(), content="true")
+}
+
+///|
+test "HasLength::is_empty - non-empty Runs" {
+  let runs = @rle.Runs::from_string("hello")
+  inspect(runs.is_empty(), content="false")
+}
+
+///|
+test "Spanning::logical_length - Runs matches span for String" {
+  let runs = @rle.Runs::from_string("hello")
+  inspect(runs.logical_length() == runs.span(), content="true")
+}

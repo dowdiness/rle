@@ -38,7 +38,7 @@ test "Runs::append rejects empty element" {
 }
 
 ///|
-test "Runs::len returns total span length" {
+test "Runs::span returns total span length" {
   let runs = @rle.Runs::from_string("hello")
   inspect(runs.span(), content="5")
 }
@@ -354,7 +354,7 @@ test "Runs::insert at end (append)" {
   let elem = @rle.Runs::from_string(" world")
   match runs.insert(5, elem) {
     Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(len) should succeed")
+    Err(_) => fail("insert(5) should succeed")
   }
 }
 

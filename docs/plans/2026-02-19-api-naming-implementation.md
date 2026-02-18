@@ -129,7 +129,7 @@ pub fn PrefixSums::length(self : PrefixSums) -> Int {
 moon check
 ```
 
-Expected: errors in `rle.mbt` and `runs.mbt` calling old `PrefixSums` method names — that's expected, fixed next.
+Expected: errors in `rle.mbt` calling old `PrefixSums` method names — that's expected, fixed next. (`runs.mbt` does not call `PrefixSums` directly and is unaffected.)
 
 **Step 5: Commit**
 
@@ -618,12 +618,12 @@ git commit -m "test: add is_empty trait coverage and logical_length default test
 **Step 1: Fix line 43**
 
 Find:
-```
+```text
 **Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `len()`, `content_len()`, `range()`.
 ```
 
 Replace with:
-```
+```text
 **Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `span()`, `logical_length()`, `range()`.
 ```
 
