@@ -38,7 +38,7 @@ test "Rle::append rejects empty element" {
 }
 
 ///|
-test "Rle::len returns total span length (cached)" {
+test "Rle::span returns total span length (cached)" {
   let rle = @rle.Rle::from_string("hello")
   inspect(rle.span(), content="5")
   // Second call uses cache
