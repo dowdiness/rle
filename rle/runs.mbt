@@ -45,15 +45,15 @@ pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
 }
 
 ///|
-/// Check if there are no runs
-pub fn[T] Runs::is_empty(self : Runs[T]) -> Bool {
-  self.0.is_empty()
+/// HasLength impl — number of runs
+pub impl[T] HasLength for Runs[T] with length(self : Runs[T]) -> Int {
+  self.0.length()
 }
 
 ///|
-/// Number of runs
-pub fn[T] Runs::count(self : Runs[T]) -> Int {
-  self.0.length()
+/// HasLength impl — is_empty
+pub impl[T] HasLength for Runs[T] with is_empty(self : Runs[T]) -> Bool {
+  self.0.is_empty()
 }
 
 ///|
@@ -79,14 +79,14 @@ pub fn[T] Runs::to_array(self : Runs[T]) -> Array[T] {
 }
 
 ///|
-/// Total span length - O(n)
-pub fn[T : Spanning] Runs::len(self : Runs[T]) -> Int {
+/// Spanning impl — total span, O(n)
+pub impl[T : Spanning] Spanning for Runs[T] with span(self : Runs[T]) -> Int {
   self.0.fold(init=0, fn(acc, item) { acc + T::span(item) })
 }
 
 ///|
-/// Total logical length - O(n)
-pub fn[T : Spanning] Runs::logical_length(self : Runs[T]) -> Int {
+/// Spanning impl — total logical length, O(n)
+pub impl[T : Spanning] Spanning for Runs[T] with logical_length(self : Runs[T]) -> Int {
   self.0.fold(init=0, fn(acc, item) { acc + T::logical_length(item) })
 }
 
@@ -224,7 +224,7 @@ pub fn[T : Spanning] Runs::range(
   start~ : Int,
   end~ : Int,
 ) -> Result[Iter[Slice[T]], RleError] {
-  let total = self.len()
+  let total = self.span()
   if start < 0 {
     return Err(
       RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
@@ -273,7 +273,7 @@ pub fn[T : Spanning] Runs::range_clamped(
   start~ : Int,
   end~ : Int,
 ) -> Iter[Slice[T]] {
-  let total = self.len()
+  let total = self.span()
   let s = if start < 0 { 0 } else { start }
   let e = if end > total { total } else { end }
   if s >= e {
@@ -291,7 +291,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
   self : Runs[T],
   pos : Int,
 ) -> Result[(Runs[T], Runs[T]), RleError] {
-  let total = self.len()
+  let total = self.span()
   if pos < 0 || pos > total {
     return Err(RleError::PositionOutOfBounds(position=pos, length=total))
   }
@@ -417,7 +417,7 @@ pub fn[T : Spanning] Runs::value_at(
   self : Runs[T],
   pos : Int,
 ) -> Result[T, RleError] {
-  let total = self.len()
+  let total = self.span()
   if pos < 0 || pos >= total {
     return Err(RleError::PositionOutOfBounds(position=pos, length=total))
   }
@@ -465,7 +465,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::delete(
   start~ : Int,
   end~ : Int,
 ) -> Result[Runs[T], RleError] {
-  let total = self.len()
+  let total = self.span()
   if start < 0 {
     return Err(
       RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
@@ -506,7 +506,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::splice(
   end~ : Int,
   replacement : Runs[T],
 ) -> Result[Runs[T], RleError] {
-  let total = self.len()
+  let total = self.span()
   if start < 0 {
     return Err(
       RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
