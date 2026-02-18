@@ -265,7 +265,7 @@ test "property: concat preserves total length" {
 }
 
 ///|
-/// Property: insert preserves length - original.len() + elem.len() == result.len()
+/// Property: insert preserves length - original.span() + elem.span() == result.span()
 fn prop_insert_preserves_len(pair : (String, String)) -> Bool {
   let (text, elem_text) = pair
   let rle = @rle.Rle::from_string(text)
@@ -291,7 +291,7 @@ test "property: insert preserves length" {
 }
 
 ///|
-/// Property: delete preserves length - original.len() - (end - start) == result.len()
+/// Property: delete preserves length - original.span() - (end - start) == result.span()
 fn prop_delete_preserves_len(text : String) -> Bool {
   let rle = @rle.Rle::from_string(text)
   let total = rle.span()
@@ -312,7 +312,7 @@ test "property: delete preserves length" {
 }
 
 ///|
-/// Property: splice length - original.len() - (end - start) + replacement.len() == result.len()
+/// Property: splice length - original.span() - (end - start) + replacement.span() == result.span()
 fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
   let (text, replacement_text) = pair
   let rle = @rle.Rle::from_string(text)

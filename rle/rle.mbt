@@ -68,7 +68,7 @@ pub impl[T] HasLength for Rle[T] with length(self : Rle[T]) -> Int {
 }
 
 ///|
-/// HasLength impl — is_empty
+/// HasLength impl — is_empty (overrides default to delegate to Runs::is_empty)
 pub impl[T] HasLength for Rle[T] with is_empty(self : Rle[T]) -> Bool {
   self.runs.is_empty()
 }

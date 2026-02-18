@@ -51,7 +51,7 @@ pub impl[T] HasLength for Runs[T] with length(self : Runs[T]) -> Int {
 }
 
 ///|
-/// HasLength impl — is_empty
+/// HasLength impl — is_empty (overrides default for direct Array check)
 pub impl[T] HasLength for Runs[T] with is_empty(self : Runs[T]) -> Bool {
   self.0.is_empty()
 }
