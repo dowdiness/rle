@@ -13,7 +13,7 @@ pub fn PrefixSums::new() -> PrefixSums {
 
 ///|
 /// Total span length - O(1)
-pub fn PrefixSums::len(self : PrefixSums) -> Int {
+pub fn PrefixSums::span(self : PrefixSums) -> Int {
   match self.spans.last() {
     Some(total) => total
     None => 0
@@ -31,7 +31,7 @@ pub fn PrefixSums::logical_length(self : PrefixSums) -> Int {
 
 ///|
 /// Number of runs
-pub fn PrefixSums::count(self : PrefixSums) -> Int {
+pub fn PrefixSums::length(self : PrefixSums) -> Int {
   self.spans.length()
 }
 
