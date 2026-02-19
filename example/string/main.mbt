@@ -21,7 +21,7 @@ fn main {
   println("\n=== Split ===")
   match rle.split(5) {
     Ok((left, right)) => {
-      left.to_string() |> println   //=> "hello"
+      left.to_string() |> println   //=> hello
       right.to_string() |> println  //=> " world"
     }
     Err(e) => e |> println
