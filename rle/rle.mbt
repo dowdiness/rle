@@ -131,25 +131,9 @@ pub fn[T : Spanning] Rle::range(
 ) -> Result[Iter[Slice[T]], RleError] {
   let sums = self.ensure_prefix()
   let total = sums.span()
-  if start < 0 {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
-    )
-  }
-  if end < 0 {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=NegativeEnd),
-    )
-  }
-  if start > end {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=StartAfterEnd),
-    )
-  }
-  if end > total {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=ExceedsLength),
-    )
+  match range_check(start, end, total) {
+    Ok(_) => ()
+    Err(e) => return Err(e)
   }
   if start == end {
     return Ok(Iter::empty())
