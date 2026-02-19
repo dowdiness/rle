@@ -21,7 +21,7 @@ fn main {
   println("\n=== Split ===")
   match rle.split(5) {
     Ok((left, right)) => {
-      left.to_string() |> println   //=> hello
+      left.to_string() |> println   //=> "hello"
       right.to_string() |> println  //=> " world"
     }
     Err(e) => e |> println
@@ -47,7 +47,7 @@ fn main {
     Err(e) => e |> println
   }
 
-  println("\n=== From Array (empty entries skipped) ===")
+  println("\n=== From Array (zero-span entries skipped; non-empty strings merge) ===")
   let rle4 = @rle.Rle::from_array(["foo", "", "bar", "", "baz"])
   rle4.length() |> println     //=> 1
   rle4.to_string() |> println  //=> foobarbaz
@@ -57,7 +57,7 @@ fn main {
   let cursor = rle5.cursor()
   cursor.advance(3) |> println      //=> true
   cursor.position() |> println      //=> Some(3)
-  cursor.current_item() |> println  //=> Some("abcdef")
+  cursor.current_item() |> println  //=> Some("abcdef")  (full run — strings always merge into one)
   cursor.seek(0) |> println         //=> true
   cursor.position() |> println      //=> Some(0)
 
