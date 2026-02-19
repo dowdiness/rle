@@ -49,6 +49,8 @@ test "Rle::span returns total span length (cached)" {
 test "Rle::logical_length returns total logical length (cached)" {
   let rle = @rle.Rle::from_string("hello")
   inspect(rle.logical_length(), content="5")
+  // Second call uses cache
+  inspect(rle.logical_length(), content="5")
 }
 
 ///|
