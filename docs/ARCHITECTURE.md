@@ -4,7 +4,7 @@ Detailed type descriptions, design rationale, and file map for the RLE library. 
 
 ## Core Types (layered bottom-up)
 
-1. **Traits** (`traits.mbt`) — `Mergeable`, `Sliceable`, `HasLength`, `Spanning: HasLength`. `Spanning` provides dual-length: `span` (index space, includes tombstones/gaps) vs `content_len` (visible payload).
+1. **Traits** (`traits.mbt`) — `Mergeable`, `Sliceable`, `HasLength`, `Spanning: HasLength`. `Spanning` provides dual-length: `span` (index space, includes tombstones/gaps) vs `logical_length` (visible payload).
 
 2. **Runs[T]** (`runs.mbt`) — Array of mergeable runs. Invariant: no two adjacent runs satisfy `can_merge()`. Key ops: `from_array_batch` (O(n) stack-merge), `append` (O(1) amortized), `find`/`find_fast`, `split`, `concat`, `extend`, `range`.
 
@@ -26,7 +26,7 @@ Detailed type descriptions, design rationale, and file map for the RLE library. 
 ## Design Decisions
 
 - **Lazy prefix sums**: Rebuilt only when queried after mutation, not on every mutation.
-- **Dual-length**: `span` vs `content_len` supports CRDT tombstones and gap buffers.
+- **Dual-length**: `span` vs `logical_length` supports CRDT tombstones and gap buffers.
 - **Stack-based batch merge**: `from_array_batch` cascades merges in a single pass.
 - **Cursor staleness**: Conservative — returns `None` rather than potentially wrong data.
 
