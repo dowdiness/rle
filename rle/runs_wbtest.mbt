@@ -85,20 +85,20 @@ test "Rle cache invalidation" {
   let rle : Rle[String] = Rle::new()
   let _ = rle.append("hello")
   // Access to trigger cache build
-  let _ = rle.len()
+  let _ = rle.span()
   inspect(rle.prefix is Some(_), content="true")
   // Mutation should invalidate
   let _ = rle.append(" world")
   inspect(rle.prefix is None, content="true")
   // Access rebuilds
-  let _ = rle.len()
+  let _ = rle.span()
   inspect(rle.prefix is Some(_), content="true")
 }
 
 ///|
 test "Rle clear invalidates cache" {
   let rle = Rle::from_string("hello")
-  let _ = rle.len()
+  let _ = rle.span()
   inspect(rle.prefix is Some(_), content="true")
   rle.clear()
   inspect(rle.prefix is None, content="true")
@@ -108,7 +108,7 @@ test "Rle clear invalidates cache" {
 test "Rle extend invalidates cache" {
   let a = Rle::from_string("hello")
   let b = Rle::from_string(" world")
-  let _ = a.len()
+  let _ = a.span()
   inspect(a.prefix is Some(_), content="true")
   a.extend(b)
   inspect(a.prefix is None, content="true")

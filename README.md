@@ -21,14 +21,14 @@ Strings implement all required traits out of the box, so you can start immediate
 let rle = @rle.Rle::from_string("hello world")
 
 // Length and lookup
-rle.len()    //=> 11
+rle.span()   //=> 11
 rle.find(6)  //=> Some({run: 0, offset: 6})
 
 // Append merges automatically (strings always merge)
 let rle = @rle.Rle::new()
 rle.append("hello")   // Ok(())
 rle.append(" world")  // Ok(()) — merged into one run
-rle.count()            //=> 1
+rle.length()           //=> 1
 rle.to_string()        //=> "hello world"
 
 // Split at any position
@@ -50,7 +50,7 @@ Build from an array in a single pass. Empty elements are skipped and adjacent on
 
 ```moonbit
 let rle = @rle.Rle::from_array(["a", "", "b", "", "c"])
-rle.count()       //=> 1  (all merged into "abc")
+rle.length()      //=> 1  (all merged into "abc")
 rle.to_string()   //=> "abc"
 ```
 
@@ -105,8 +105,8 @@ pub impl @rle.HasLength for MyRun with length(self) {
   self.text.length()
 }
 
-pub impl @rle.Spanning for MyRun with content_len(self) {
-  self.text.length()  // for plain content, same as length
+pub impl @rle.Spanning for MyRun with span(self) {
+  self.text.length()  // satisfies Spanning; logical_length defaults to span()
 }
 
 // Optional: Sliceable (needed for split and range iteration)
@@ -120,7 +120,7 @@ pub impl @rle.Sliceable for MyRun with slice(self, start~, end~) {
 The `Spanning` trait provides two length notions:
 
 - **`span`** — total size in the position/index space (defaults to `length`). Used for lookups.
-- **`content_len`** — visible payload size. May be less than `span`.
+- **`logical_length`** — visible payload size. May be less than `span`.
 
 This distinction is useful for CRDTs (tombstones occupy index space but have no visible content), gap buffers (gap occupies space but isn't content), and similar structures:
 
@@ -129,7 +129,7 @@ pub impl @rle.Spanning for CrdtRun with span(self) {
   self.len  // includes tombstones
 }
 
-pub impl @rle.Spanning for CrdtRun with content_len(self) {
+pub impl @rle.Spanning for CrdtRun with logical_length(self) {
   if self.deleted { 0 } else { self.len }
 }
 ```
@@ -143,9 +143,9 @@ pub impl @rle.Spanning for CrdtRun with content_len(self) {
 | `Rle::new()` | O(1) | Empty RLE sequence |
 | `Rle::from_array(arr)` | O(n) | Batch construct with merging |
 | `Rle::from_string(s)` | O(1) | Create from string |
-| `len()` | O(1)* | Total span length |
-| `content_len()` | O(1)* | Total content length |
-| `count()` | O(1) | Number of runs |
+| `span()` | O(1)* | Total span length |
+| `logical_length()` | O(1)* | Total content length |
+| `length()` | O(1) | Number of runs |
 | `find(pos)` | O(log n)* | Find run containing position |
 | `append(elem)` | O(1) amortized | Append with auto-merge |
 | `split(pos)` | O(n) | Split into two at position |

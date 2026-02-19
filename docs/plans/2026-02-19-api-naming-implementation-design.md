@@ -6,7 +6,7 @@
 
 ## What
 
-Rename core API methods across the RLE library before the 1.0.0 release:
+Rename core API methods across the RLE library before the 0.1.0 release:
 
 | Current | Proposed |
 |---------|----------|
@@ -63,8 +63,7 @@ Verify: `moon check && moon test`
 
 - **`CLAUDE.md`**: update line 43 (`len()`, `content_len()` references → `span()`, `logical_length()`)
 - **`README.md`**: update Quick Start, API Overview table, all code examples
-- **`CHANGELOG.md`**: create with 1.0.0 entry
-- **`moon.mod.json`**: bump version to `"1.0.0"`
+- **`CHANGELOG.md`**: create with 0.1.0 entry
 
 ### Layer 5 — Generated Files
 

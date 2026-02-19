@@ -13,15 +13,18 @@ pub impl Mergeable for String with merge(a : String, b : String) -> String {
 }
 
 ///|
-/// String implements HasLength
+/// String implements HasLength - length() is used by Spanning default
+/// logical_length() → span() → HasLength::length(), all returning UTF-16 code unit count
 pub impl HasLength for String with length(self : String) -> Int {
   self.length()
 }
 
 ///|
-/// String implements Spanning - span = content_len = UTF-16 code unit count
-pub impl Spanning for String with content_len(self : String) -> Int {
-  self.length()
+/// String implements Spanning via defaults:
+/// span() → HasLength::length(), logical_length() → span()
+/// Both return UTF-16 code unit count.
+pub impl Spanning for String with span(self : String) -> Int {
+  HasLength::length(self)
 }
 
 ///|

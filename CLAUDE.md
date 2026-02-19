@@ -40,7 +40,7 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 **Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend silently skip.
 
-**Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `len()`, `content_len()`, `range()`.
+**Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `span()`, `logical_length()`, `range()`.
 
 **Split-then-concat run count.** Round-trip may change run count — this is expected. Don't assert on run count after split+concat.
 

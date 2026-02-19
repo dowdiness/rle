@@ -61,7 +61,7 @@ pub fn[T] RleCursor::current_item(self : RleCursor[T]) -> T? {
 ///|
 /// Check if at end (returns true if stale - conservative stop)
 pub fn[T : Spanning] RleCursor::at_end(self : RleCursor[T]) -> Bool {
-  self.is_stale() || self.global_offset >= self.rle.len()
+  self.is_stale() || self.global_offset >= self.rle.span()
 }
 
 ///|
@@ -73,7 +73,7 @@ pub fn[T : Spanning] RleCursor::advance(self : RleCursor[T], n : Int) -> Bool {
   if n <= 0 {
     return true
   }
-  let total = self.rle.len()
+  let total = self.rle.span()
   let target = self.global_offset + n
   if target > total {
     self.global_offset = total
@@ -146,7 +146,7 @@ pub fn[T : Spanning] RleCursor::seek(self : RleCursor[T], pos : Int) -> Bool {
     self.offset_in_run = 0
     return false
   }
-  let total = self.rle.len()
+  let total = self.rle.span()
   if pos >= total {
     self.global_offset = total
     self.run_index = self.rle.runs.0.length()
@@ -180,7 +180,7 @@ pub fn[T] RleCursor::seek_start(self : RleCursor[T]) -> Unit {
 ///|
 /// Seek to end
 pub fn[T : Spanning] RleCursor::seek_end(self : RleCursor[T]) -> Unit {
-  self.global_offset = self.rle.len()
+  self.global_offset = self.rle.span()
   self.run_index = self.rle.runs.0.length()
   self.offset_in_run = 0
 }

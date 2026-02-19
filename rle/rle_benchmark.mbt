@@ -12,7 +12,7 @@ pub impl HasLength for BenchRun with length(self : BenchRun) -> Int {
 }
 
 ///|
-pub impl Spanning for BenchRun with content_len(self : BenchRun) -> Int {
+pub impl Spanning for BenchRun with span(self : BenchRun) -> Int {
   self.len
 }
 
@@ -89,7 +89,7 @@ test "runs - concat batch" (b : @bench.T) {
   let runs_b = make_string_runs(500, 10)
   b.bench(fn() {
     let result = runs_a.concat(runs_b)
-    b.keep(result.count())
+    b.keep(result.length())
   })
 }
 
@@ -100,7 +100,7 @@ test "runs - extend batch" (b : @bench.T) {
   b.bench(fn() {
     let runs_a = make_string_runs(500, 10)
     runs_a.extend(runs_b)
-    b.keep(runs_a.count())
+    b.keep(runs_a.length())
   })
 }
 
@@ -113,6 +113,6 @@ test "runs - from_array_batch" (b : @bench.T) {
   }
   b.bench(fn() {
     let runs = Runs::from_array_batch(arr)
-    b.keep(runs.count())
+    b.keep(runs.length())
   })
 }

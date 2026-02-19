@@ -2,14 +2,14 @@
 
 **Status**: Draft Proposal
 **Created**: 2026-02-19
-**Target Version**: 1.0.0 (current: 0.1.0 in moon.mod.json)
+**Target Version**: 0.1.0
 **Breaking Changes**: Yes (pre-release, no migration needed)
 
 ---
 
 ## Executive Summary
 
-This proposal suggests renaming core API methods to follow standard naming conventions before the initial 1.0.0 release. Since the library has not been publicly released yet, we can make these changes without migration concerns.
+This proposal suggests renaming core API methods to follow standard naming conventions before the initial 0.1.0 release. Since the library has not been publicly released yet, we can make these changes without migration concerns.
 
 ## Background
 
@@ -51,7 +51,7 @@ The inheritance relationship `Spanning: HasLength` properly reflects the semanti
 ### Perfect Timing
 
 - **No public release yet**: Zero migration burden
-- **Clean slate**: 1.0.0 will have the right API from day one
+- **Clean slate**: 0.1.0 will have the right API from day one
 - **No technical debt**: Avoid locking in poor naming
 - **Professional launch**: Strong first impression
 
@@ -60,10 +60,10 @@ The inheritance relationship `Spanning: HasLength` properly reflects the semanti
 | Aspect | Fix Pre-Release | Fix Post-Release |
 |--------|----------------|------------------|
 | Migration needed | ❌ No | ✅ Yes |
-| Breaking changes | ✅ Free | ❌ Requires v2.0.0 |
+| Breaking changes | ✅ Free | ❌ Requires major bump |
 | User impact | ✅ None | ❌ Significant |
 | Implementation cost | ✅ Low | ❌ High (deprecation) |
-| API quality | ✅ Clean 1.0 | ❌ Technical debt |
+| API quality | ✅ Clean 0.1 | ❌ Technical debt |
 
 ## Proposed Changes
 
@@ -239,7 +239,7 @@ No change needed. With `logical_length()` defaulting to `self.span()` and `Strin
 
 ## Implementation Plan
 
-### Timeline: 1 Week to 1.0.0
+### Timeline: 1 Week to 0.1.0
 
 #### Day 1-2: Core Implementation
 
@@ -324,7 +324,7 @@ No change needed. With `logical_length()` defaulting to `self.span()` and `Strin
 ```markdown
   # Changelog
 
-  ## [1.0.0] - 2026-MM-DD
+  ## [0.1.0] - 2026-MM-DD
 
   Initial stable release with clean, consistent API.
 
@@ -362,7 +362,7 @@ No change needed. With `logical_length()` defaulting to `self.span()` and `Strin
 #### Day 6-7: Release Preparation
 
 - [ ] **Version Updates**
-  - [ ] Set `moon.mod.json` to `"version": "1.0.0"`
+  - [ ] Set `moon.mod.json` to `"version": "0.1.0"`
   - [ ] Verify all dependencies
 
 - [ ] **Quality Assurance**
@@ -373,8 +373,8 @@ No change needed. With `logical_length()` defaulting to `self.span()` and `Strin
 
 - [ ] **Git Operations**
   - [ ] Commit all changes
-  - [ ] Tag release: `git tag -a v1.0.0 -m "Release v1.0.0"`
-  - [ ] Push tag: `git push origin v1.0.0`
+  - [ ] Tag release: `git tag -a v0.1.0 -m "Release v0.1.0"`
+  - [ ] Push tag: `git push origin v0.1.0`
 
 - [ ] **Publish**
   - [ ] Publish to mooncakes.io
@@ -383,7 +383,7 @@ No change needed. With `logical_length()` defaulting to `self.span()` and `Strin
 
 ## Benefits
 
-### 1. Professional 1.0.0 Launch
+### 1. Professional 0.1.0 Launch
 
 - Clean, consistent API from day one
 - No "legacy" naming to explain
@@ -452,11 +452,11 @@ process_if_nonempty(runs)
 - **New**: `CHANGELOG.md` - Create initial entry
 
 #### Configuration (Day 6)
-- `moon.mod.json` - Version to 1.0.0
+- `moon.mod.json` - Version to 0.1.0
 
 ### Verification Checklist
 
-Before tagging v1.0.0:
+Before tagging v0.1.0:
 
 - [ ] `moon check` passes
 - [ ] `moon test` passes (100%)
@@ -548,20 +548,20 @@ Before tagging v1.0.0:
 
 ## Timeline Summary
 ```
-Week 1: Final API Stabilization for 1.0.0
+Week 1: Final API Stabilization for 0.1.0
 ├─ Day 1-2: Implementation
 ├─ Day 3-4: Testing
 ├─ Day 5:   Documentation
 └─ Day 6-7: Release
 
-Target: 1.0.0 release
+Target: 0.1.0 release
 ```
 
 ## Conclusion
 
-This proposal represents the final API cleanup before the 1.0.0 release. Since there are no public users yet, we can make these breaking changes at zero cost while establishing a professional, standards-compliant foundation.
+This proposal represents the final API cleanup before the 0.1.0 release. Since there are no public users yet, we can make these breaking changes at zero cost while establishing a professional, standards-compliant foundation.
 
-**Recommendation**: Approve and implement before 1.0.0 release.
+**Recommendation**: Approve and implement before 0.1.0 release.
 
 ---
 

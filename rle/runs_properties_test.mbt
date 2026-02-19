@@ -49,14 +49,14 @@ test "property: span is non-negative" {
 }
 
 ///|
-/// Property: content_len <= span
-fn prop_content_len_bounded(text : String) -> Bool {
-  @rle.Spanning::content_len(text) <= @rle.Spanning::span(text)
+/// Property: logical_length <= span
+fn prop_logical_length_bounded(text : String) -> Bool {
+  @rle.Spanning::logical_length(text) <= @rle.Spanning::span(text)
 }
 
 ///|
-test "property: content_len <= span" {
-  @qc.quick_check_fn(prop_content_len_bounded)
+test "property: logical_length <= span" {
+  @qc.quick_check_fn(prop_logical_length_bounded)
 }
 
 ///|
@@ -86,7 +86,7 @@ fn prop_runs_len_preserved(texts : Array[String]) -> Bool {
     }
   })
   let runs = @rle.Runs::from_array(texts)
-  runs.len() == expected
+  runs.span() == expected
 }
 
 ///|
@@ -98,13 +98,13 @@ test "property: Runs len preserved" {
 /// Property: split preserves total length
 fn prop_split_preserves_len(text : String) -> Bool {
   let runs = @rle.Runs::from_string(text)
-  let total = runs.len()
+  let total = runs.span()
   if total == 0 {
     return true
   }
   let k = total / 2
   match runs.split(k) {
-    Ok((left, right)) => left.len() + right.len() == total
+    Ok((left, right)) => left.span() + right.span() == total
     Err(_) => false
   }
 }
@@ -253,10 +253,10 @@ fn prop_concat_preserves_len(pair : (Array[String], Array[String])) -> Bool {
   let (a, b) = pair
   let runs_a = @rle.Runs::from_array(a)
   let runs_b = @rle.Runs::from_array(b)
-  let len_a = runs_a.len()
-  let len_b = runs_b.len()
+  let len_a = runs_a.span()
+  let len_b = runs_b.span()
   let concatenated = runs_a.concat(runs_b)
-  concatenated.len() == len_a + len_b
+  concatenated.span() == len_a + len_b
 }
 
 ///|
@@ -265,21 +265,21 @@ test "property: concat preserves total length" {
 }
 
 ///|
-/// Property: insert preserves length - original.len() + elem.len() == result.len()
+/// Property: insert preserves length - original.span() + elem.span() == result.span()
 fn prop_insert_preserves_len(pair : (String, String)) -> Bool {
   let (text, elem_text) = pair
   let rle = @rle.Rle::from_string(text)
   let elem = @rle.Rle::from_string(elem_text)
-  let total = rle.len()
+  let total = rle.span()
   if total == 0 {
     match rle.insert(0, elem) {
-      Ok(result) => result.len() == elem.len()
+      Ok(result) => result.span() == elem.span()
       Err(_) => false
     }
   } else {
     let pos = total / 2
     match rle.insert(pos, elem) {
-      Ok(result) => result.len() == total + elem.len()
+      Ok(result) => result.span() == total + elem.span()
       Err(_) => false
     }
   }
@@ -291,17 +291,17 @@ test "property: insert preserves length" {
 }
 
 ///|
-/// Property: delete preserves length - original.len() - (end - start) == result.len()
+/// Property: delete preserves length - original.span() - (end - start) == result.span()
 fn prop_delete_preserves_len(text : String) -> Bool {
   let rle = @rle.Rle::from_string(text)
-  let total = rle.len()
+  let total = rle.span()
   if total < 2 {
     return true
   }
   let start = total / 4
   let end = total / 4 + total / 2
   match rle.delete(start~, end~) {
-    Ok(result) => result.len() == total - (end - start)
+    Ok(result) => result.span() == total - (end - start)
     Err(_) => false
   }
 }
@@ -312,19 +312,19 @@ test "property: delete preserves length" {
 }
 
 ///|
-/// Property: splice length - original.len() - (end - start) + replacement.len() == result.len()
+/// Property: splice length - original.span() - (end - start) + replacement.span() == result.span()
 fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
   let (text, replacement_text) = pair
   let rle = @rle.Rle::from_string(text)
   let replacement = @rle.Rle::from_string(replacement_text)
-  let total = rle.len()
+  let total = rle.span()
   if total < 2 {
     return true
   }
   let start = total / 4
   let end = total / 4 + total / 2
   match rle.splice(start~, end~, replacement) {
-    Ok(result) => result.len() == total - (end - start) + replacement.len()
+    Ok(result) => result.span() == total - (end - start) + replacement.span()
     Err(_) => false
   }
 }

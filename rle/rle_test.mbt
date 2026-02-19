@@ -4,13 +4,13 @@
 test "Rle::new creates empty" {
   let rle : @rle.Rle[String] = @rle.Rle::new()
   inspect(rle.is_empty(), content="true")
-  inspect(rle.count(), content="0")
+  inspect(rle.length(), content="0")
 }
 
 ///|
 test "Rle::from_string creates single run" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.count(), content="1")
+  inspect(rle.length(), content="1")
   inspect(rle.to_string(), content="hello")
 }
 
@@ -18,7 +18,7 @@ test "Rle::from_string creates single run" {
 test "Rle::from_string with empty string" {
   let rle = @rle.Rle::from_string("")
   inspect(rle.is_empty(), content="true")
-  inspect(rle.count(), content="0")
+  inspect(rle.length(), content="0")
 }
 
 ///|
@@ -26,7 +26,7 @@ test "Rle::append merges adjacent runs" {
   let rle : @rle.Rle[String] = @rle.Rle::new()
   let _ = rle.append("hello")
   let _ = rle.append(" world")
-  inspect(rle.count(), content="1")
+  inspect(rle.length(), content="1")
   inspect(rle.to_string(), content="hello world")
 }
 
@@ -38,26 +38,28 @@ test "Rle::append rejects empty element" {
 }
 
 ///|
-test "Rle::len returns total span length (cached)" {
+test "Rle::span returns total span length (cached)" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.len(), content="5")
+  inspect(rle.span(), content="5")
   // Second call uses cache
-  inspect(rle.len(), content="5")
+  inspect(rle.span(), content="5")
 }
 
 ///|
-test "Rle::content_len returns total content length (cached)" {
+test "Rle::logical_length returns total logical length (cached)" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.content_len(), content="5")
+  inspect(rle.logical_length(), content="5")
+  // Second call uses cache
+  inspect(rle.logical_length(), content="5")
 }
 
 ///|
 test "Rle::append invalidates cache" {
   let rle = @rle.Rle::from_string("hello")
-  let _ = rle.len() // Build cache
+  let _ = rle.span() // Build cache
   let _ = rle.append(" world")
   // Cache should be rebuilt
-  inspect(rle.len(), content="11")
+  inspect(rle.span(), content="11")
 }
 
 ///|
@@ -173,7 +175,7 @@ test "Rle::concat merges adjacent" {
   let a = @rle.Rle::from_string("hello")
   let b = @rle.Rle::from_string(" world")
   let result = a.concat(b)
-  inspect(result.count(), content="1")
+  inspect(result.length(), content="1")
   inspect(result.to_string(), content="hello world")
 }
 
@@ -182,17 +184,17 @@ test "Rle::extend merges in-place" {
   let a = @rle.Rle::from_string("hello")
   let b = @rle.Rle::from_string(" world")
   a.extend(b)
-  inspect(a.count(), content="1")
+  inspect(a.length(), content="1")
   inspect(a.to_string(), content="hello world")
 }
 
 ///|
 test "Rle::clear empties and invalidates cache" {
   let rle = @rle.Rle::from_string("hello")
-  let _ = rle.len() // Build cache
+  let _ = rle.span() // Build cache
   rle.clear()
   inspect(rle.is_empty(), content="true")
-  inspect(rle.len(), content="0")
+  inspect(rle.span(), content="0")
 }
 
 ///|
@@ -212,14 +214,14 @@ test "Rle::iter_chars iterates codepoints" {
 ///|
 test "Rle::from_array merges and skips empty" {
   let rle = @rle.Rle::from_array(["a", "", "b", "", "c"])
-  inspect(rle.count(), content="1")
+  inspect(rle.length(), content="1")
   inspect(rle.to_string(), content="abc")
 }
 
 ///|
 test "Rle unicode handling" {
   let rle = @rle.Rle::from_string("こんにちは")
-  inspect(rle.len(), content="5")
+  inspect(rle.span(), content="5")
   inspect(rle.find(2), content="Some({run: 0, offset: 2})")
 }
 
@@ -490,7 +492,7 @@ test "Rle::insert at middle" {
   match rle.insert(2, elem) {
     Ok(result) => {
       inspect(result.to_string(), content="helllo")
-      inspect(result.len(), content="6")
+      inspect(result.span(), content="6")
     }
     Err(_) => fail("insert should succeed")
   }
@@ -578,7 +580,7 @@ test "Rle::delete all" {
   match rle.delete(start=0, end=5) {
     Ok(result) => {
       inspect(result.is_empty(), content="true")
-      inspect(result.len(), content="0")
+      inspect(result.span(), content="0")
     }
     Err(_) => fail("delete all should succeed")
   }
@@ -680,7 +682,7 @@ test "Runs::from_array_batch produces same result as from_array" {
   let via_array = @rle.Runs::from_array(arr)
   let via_batch = @rle.Runs::from_array_batch(arr)
   inspect(via_array.to_string() == via_batch.to_string(), content="true")
-  inspect(via_array.count() == via_batch.count(), content="true")
+  inspect(via_array.length() == via_batch.length(), content="true")
 }
 
 ///|
@@ -688,7 +690,7 @@ test "Runs::from_array_batch skips empty elements" {
   let arr = ["a", "", "b", "", "c"]
   let runs = @rle.Runs::from_array_batch(arr)
   inspect(runs.to_string(), content="abc")
-  inspect(runs.count(), content="1")
+  inspect(runs.length(), content="1")
 }
 
 ///|
@@ -703,4 +705,53 @@ test "Runs::from_array_batch handles all empty elements" {
   let arr = ["", "", ""]
   let runs = @rle.Runs::from_array_batch(arr)
   inspect(runs.is_empty(), content="true")
+}
+
+///|
+test "HasLength::is_empty - empty Rle" {
+  let rle : @rle.Rle[String] = @rle.Rle::new()
+  inspect(rle.is_empty(), content="true")
+}
+
+///|
+test "HasLength::is_empty - non-empty Rle" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.is_empty(), content="false")
+}
+
+///|
+fn[T : @rle.HasLength] check_empty(x : T) -> Bool {
+  x.is_empty()
+}
+
+///|
+test "HasLength::is_empty via generic constraint" {
+  let empty : @rle.Rle[String] = @rle.Rle::new()
+  let nonempty = @rle.Rle::from_string("hi")
+  inspect(check_empty(empty), content="true")
+  inspect(check_empty(nonempty), content="false")
+}
+
+///|
+test "Spanning::logical_length default - equals span for String" {
+  let rle = @rle.Rle::from_string("hello")
+  inspect(rle.logical_length() == rle.span(), content="true")
+}
+
+///|
+test "HasLength::is_empty - empty Runs" {
+  let runs : @rle.Runs[String] = @rle.Runs::new()
+  inspect(runs.is_empty(), content="true")
+}
+
+///|
+test "HasLength::is_empty - non-empty Runs" {
+  let runs = @rle.Runs::from_string("hello")
+  inspect(runs.is_empty(), content="false")
+}
+
+///|
+test "Spanning::logical_length - Runs matches span for String" {
+  let runs = @rle.Runs::from_string("hello")
+  inspect(runs.logical_length() == runs.span(), content="true")
 }

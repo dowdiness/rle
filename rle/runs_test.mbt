@@ -4,13 +4,13 @@
 test "Runs::new creates empty" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   inspect(runs.is_empty(), content="true")
-  inspect(runs.count(), content="0")
+  inspect(runs.length(), content="0")
 }
 
 ///|
 test "Runs::from_string creates single run" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.count(), content="1")
+  inspect(runs.length(), content="1")
   inspect(runs.to_string(), content="hello")
 }
 
@@ -18,7 +18,7 @@ test "Runs::from_string creates single run" {
 test "Runs::from_string with empty string" {
   let runs = @rle.Runs::from_string("")
   inspect(runs.is_empty(), content="true")
-  inspect(runs.count(), content="0")
+  inspect(runs.length(), content="0")
 }
 
 ///|
@@ -26,7 +26,7 @@ test "Runs::append merges adjacent runs" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   let _ = runs.append("hello")
   let _ = runs.append(" world")
-  inspect(runs.count(), content="1")
+  inspect(runs.length(), content="1")
   inspect(runs.to_string(), content="hello world")
 }
 
@@ -38,15 +38,15 @@ test "Runs::append rejects empty element" {
 }
 
 ///|
-test "Runs::len returns total span length" {
+test "Runs::span returns total span length" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.len(), content="5")
+  inspect(runs.span(), content="5")
 }
 
 ///|
-test "Runs::content_len returns total content length" {
+test "Runs::logical_length returns total logical length" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.content_len(), content="5")
+  inspect(runs.logical_length(), content="5")
 }
 
 ///|
@@ -174,7 +174,7 @@ test "Runs::concat merges adjacent" {
   let a = @rle.Runs::from_string("hello")
   let b = @rle.Runs::from_string(" world")
   let result = a.concat(b)
-  inspect(result.count(), content="1")
+  inspect(result.length(), content="1")
   inspect(result.to_string(), content="hello world")
 }
 
@@ -183,7 +183,7 @@ test "Runs::extend merges in-place" {
   let a = @rle.Runs::from_string("hello")
   let b = @rle.Runs::from_string(" world")
   a.extend(b)
-  inspect(a.count(), content="1")
+  inspect(a.length(), content="1")
   inspect(a.to_string(), content="hello world")
 }
 
@@ -192,7 +192,7 @@ test "Runs::clear empties the runs" {
   let runs = @rle.Runs::from_string("hello")
   runs.clear()
   inspect(runs.is_empty(), content="true")
-  inspect(runs.len(), content="0")
+  inspect(runs.span(), content="0")
 }
 
 ///|
@@ -213,14 +213,14 @@ test "Runs::iter_chars iterates codepoints" {
 ///|
 test "Runs::from_array merges and skips empty" {
   let runs = @rle.Runs::from_array(["a", "", "b", "", "c"])
-  inspect(runs.count(), content="1")
+  inspect(runs.length(), content="1")
   inspect(runs.to_string(), content="abc")
 }
 
 ///|
 test "Runs unicode handling" {
   let runs = @rle.Runs::from_string("こんにちは")
-  inspect(runs.len(), content="5")
+  inspect(runs.span(), content="5")
   inspect(runs.find(2), content="Some({run: 0, offset: 2})")
 }
 
@@ -332,7 +332,7 @@ test "Runs::insert at middle" {
   match runs.insert(2, elem) {
     Ok(result) => {
       inspect(result.to_string(), content="helllo")
-      inspect(result.len(), content="6")
+      inspect(result.span(), content="6")
     }
     Err(_) => fail("insert should succeed")
   }
@@ -354,7 +354,7 @@ test "Runs::insert at end (append)" {
   let elem = @rle.Runs::from_string(" world")
   match runs.insert(5, elem) {
     Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(len) should succeed")
+    Err(_) => fail("insert(5) should succeed")
   }
 }
 
@@ -420,7 +420,7 @@ test "Runs::delete all" {
   match runs.delete(start=0, end=5) {
     Ok(result) => {
       inspect(result.is_empty(), content="true")
-      inspect(result.len(), content="0")
+      inspect(result.span(), content="0")
     }
     Err(_) => fail("delete all should succeed")
   }
