@@ -22,7 +22,7 @@ fn main {
   match rle.split(5) {
     Ok((left, right)) => {
       left.to_string() |> println   //=> hello
-      right.to_string() |> println  //=> " world"
+      right.to_string() |> println  //=>  world  (note: leading space)
     }
     Err(e) => e |> println
   }

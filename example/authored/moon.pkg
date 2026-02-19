@@ -1,5 +1,6 @@
 import {
-  "dowdiness/rle/rle"
+  "dowdiness/rle/rle",
+  "moonbitlang/core/builtin",
 }
 
 options(
