@@ -1,8 +1,8 @@
 # Changelog
 
-## [1.0.0] - 2026-02-19
+## [0.1.0] - 2026-02-19
 
-Initial stable release with clean, consistent API.
+Initial release with clean, consistent API.
 
 ### Breaking Changes
 
