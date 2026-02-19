@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Rename `count()` → `length()`, `len()` → `span()`, `content_len()` → `logical_length()` across the RLE library, add `is_empty()` to `HasLength` trait, and bump to 1.0.0.
+**Goal:** Rename `count()` → `length()`, `len()` → `span()`, `content_len()` → `logical_length()` across the RLE library, and add `is_empty()` to `HasLength` trait.
 
 **Architecture:** Five sequential layers (traits → impls → tests → docs → generated), each verified with `moon check` before proceeding. Renames are achieved by replacing standalone `pub fn` methods with `pub impl TraitName for Type with method_name` blocks.
 
@@ -76,7 +76,7 @@ Expected: passes (no implementors of `content_len` yet — those are in Layer 2)
 
 ```bash
 git add rle/traits.mbt
-git commit -m "refactor: update HasLength and Spanning traits for 1.0.0 API"
+git commit -m "refactor: update HasLength and Spanning traits for 0.1.0 API"
 ```
 
 ---
@@ -631,7 +631,7 @@ Replace with:
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: update CLAUDE.md method name references for 1.0.0 API"
+git commit -m "docs: update CLAUDE.md method name references for 0.1.0 API"
 ```
 
 ---
@@ -655,23 +655,22 @@ git commit -m "docs: update CLAUDE.md method name references for 1.0.0 API"
 
 ```bash
 git add README.md
-git commit -m "docs: update README for 1.0.0 API naming"
+git commit -m "docs: update README for 0.1.0 API naming"
 ```
 
 ---
 
-### Task 14: Create `CHANGELOG.md` and bump version
+### Task 14: Create `CHANGELOG.md`
 
 **Files:**
 - Create: `CHANGELOG.md`
-- Modify: `moon.mod.json`
 
 **Step 1: Create `CHANGELOG.md`**
 
 ```markdown
 # Changelog
 
-## [1.0.0] - 2026-02-19
+## [0.1.0] - 2026-02-19
 
 Initial stable release with clean, consistent API.
 
@@ -701,22 +700,11 @@ Initial stable release with clean, consistent API.
 - Batch construction and convenience operations (`insert`, `delete`, `splice`, `value_at`)
 ```
 
-**Step 2: Bump version in `moon.mod.json`**
-
-Change:
-```json
-"version": "0.1.0"
-```
-To:
-```json
-"version": "1.0.0"
-```
-
-**Step 3: Commit**
+**Step 2: Commit**
 
 ```bash
-git add CHANGELOG.md moon.mod.json
-git commit -m "chore: bump version to 1.0.0 and add CHANGELOG"
+git add CHANGELOG.md
+git commit -m "chore: add CHANGELOG for 0.1.0"
 ```
 
 ---
@@ -757,7 +745,7 @@ Expected: all pass.
 
 ```bash
 git add rle/pkg.generated.mbti
-git commit -m "chore: regenerate pkg.generated.mbti for 1.0.0 API"
+git commit -m "chore: regenerate pkg.generated.mbti for 0.1.0 API"
 ```
 
 ---
@@ -769,4 +757,4 @@ git commit -m "chore: regenerate pkg.generated.mbti for 1.0.0 API"
 - [ ] `moon bench --release` runs without errors
 - [ ] `pkg.generated.mbti` exports new names
 - [ ] `CHANGELOG.md` accurate
-- [ ] `moon.mod.json` version is `"1.0.0"`
+- [ ] `moon.mod.json` version is `"0.1.0"`
