@@ -21,27 +21,28 @@ Strings implement all required traits out of the box, so you can start immediate
 let rle = @rle.Rle::from_string("hello world")
 
 // Length and lookup
-rle.span()   //=> 11
-rle.find(6)  //=> Some({run: 0, offset: 6})
+rle.span() |> println   //=> 11
+rle.find(6) |> println  //=> Some({run: 0, offset: 6})
 
 // Append merges automatically (strings always merge)
 let rle = @rle.Rle::new()
-rle.append("hello")   // Ok(())
-rle.append(" world")  // Ok(()) — merged into one run
-rle.length()           //=> 1
-rle.to_string()        //=> "hello world"
+rle.append("hello") |> println   // Ok(())
+rle.append(" world") |> println  // Ok(()) — merged into one run
+rle.length() |> println          //=> 1
+rle.to_string() |> println        //=> "hello world"
 
 // Split at any position
 let (left, right) = rle.split(5).unwrap()
-left.to_string()   //=> "hello"
-right.to_string()  //=> " world"
+left.to_string() |> println   //=> "hello"
+right.to_string() |> println  //=> " world"
 
 // Range iteration returns slices without copying
 let slices = rle.range(start=1, end=4).unwrap().collect()
-match slices[0].to_inner() {
+let ell = match slices[0].to_inner() {
   Ok(value) => value  //=> "ell"
   Err(_) => ""
 }
+println(ell)
 ```
 
 ### Batch Construction
