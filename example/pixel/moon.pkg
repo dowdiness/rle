@@ -1,7 +1,7 @@
 import {
-  "dowdiness/rle/rle"
+  "dowdiness/rle/rle",
 }
 
 options(
-  "is-main": true
+  "is-main": true,
 )

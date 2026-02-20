@@ -1,0 +1,16 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "dowdiness/rle/example/authored"
+
+// Values
+
+// Errors
+
+// Types and methods
+type AuthoredRun
+pub impl Eq for AuthoredRun
+pub impl Show for AuthoredRun
+
+// Type aliases
+
+// Traits
+
