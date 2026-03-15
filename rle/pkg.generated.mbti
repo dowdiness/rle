@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn slice_string_view(String, start~ : Int, end~ : Int) -> Result[String, CreatingViewError]
+pub fn slice_string_view(String, start~ : Int, end~ : Int) -> Result[String, SliceError]
 
 // Errors
 pub(all) suberror InternalError {

@@ -38,17 +38,7 @@ impl @rle.Sliceable for AuthoredRun with slice(
 ) -> Result[AuthoredRun, @rle.RleError] {
   match @rle.slice_string_view(self.text, start~, end~) {
     Ok(sliced) => Ok({ author: self.author, text: sliced })
-    Err(err) =>
-      match err {
-        @builtin.IndexOutOfBounds =>
-          Err(
-            @rle.RleError::InvalidSlice(
-              reason=@rle.SliceError::IndexOutOfBounds,
-            ),
-          )
-        @builtin.InvalidIndex =>
-          Err(@rle.RleError::InvalidSlice(reason=@rle.SliceError::InvalidIndex))
-      }
+    Err(err) => Err(@rle.RleError::InvalidSlice(reason=err))
   }
 }
 
