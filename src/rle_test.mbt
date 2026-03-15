@@ -831,6 +831,67 @@ impl @rle.Mergeable for DenseTestRun with merge(a, b) {
 }
 
 ///|
+test "Rle::from_sorted_ints empty input" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([])
+  inspect(rle.is_empty(), content="true")
+}
+
+///|
+test "Rle::from_sorted_ints single element" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([5])
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="1")
+}
+
+///|
+test "Rle::from_sorted_ints consecutive" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // All consecutive → one run via from_array_batch merge
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="5")
+}
+
+///|
+test "Rle::from_sorted_ints with gaps" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  // Two groups: [0,1,2] and [5,6,7]
+  inspect(rle.length(), content="2")
+  inspect(rle.span(), content="6")
+}
+
+///|
+test "Rle::from_sorted_ints skips duplicates" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 3, 3])
+  // After dedup: [1, 2, 3] → one run
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="3")
+}
+
+///|
+test "Rle::from_sorted_ints duplicates across gap" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 5, 5, 6])
+  // After dedup: [1, 2] and [5, 6] → two runs
+  inspect(rle.length(), content="2")
+  inspect(rle.span(), content="4")
+}
+
+///|
+test "Rle::from_sorted_ints all duplicates" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([5, 5, 5])
+  // After dedup: [5] → one run with count 1
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="1")
+}
+
+///|
+test "Rle::from_sorted_ints dense run collapses (index-free)" {
+  let rle : @rle.Rle[DenseTestRun] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // DenseTestRun always merges → single run
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="5")
+}
+
+///|
 test "Rle::each_with_position on empty" {
   let rle : @rle.Rle[String] = @rle.Rle::new()
   let positions : Array[(String, Int, Int)] = []

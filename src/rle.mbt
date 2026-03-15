@@ -46,6 +46,18 @@ pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
 }
 
 ///|
+/// Construct an Rle from a sorted array of integers.
+///
+/// Groups consecutive integers into runs via `FromRange`, then normalizes
+/// with stack-merge. See `Runs::from_sorted_ints` for deduplication and
+/// sortedness contracts.
+pub fn[T : FromRange + Spanning + Mergeable] Rle::from_sorted_ints(
+  ints : Array[Int],
+) -> Rle[T] {
+  { runs: Runs::from_sorted_ints(ints), prefix: None, version: 0 }
+}
+
+///|
 /// Wrap existing Runs into an Rle with lazy prefix sums
 pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
   { runs, prefix: None, version: 0 }
