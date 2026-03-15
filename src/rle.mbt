@@ -74,11 +74,12 @@ pub fn[T : Spanning] Rle::each_with_position(
   f : (T, Int, Int) -> Unit,
 ) -> Unit {
   let prefix = self.ensure_prefix()
+  let mut start = 0
   for i = 0; i < self.runs.0.length(); i = i + 1 {
     let run = self.runs.0[i]
-    let start = prefix.span_before(i)
     let end = prefix.spans[i]
     f(run, start, end)
+    start = end
   }
 }
 
@@ -95,18 +96,21 @@ pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
   let total_runs = items.length()
   let mut run_idx = 0
   let mut offset = 0
+  let mut cached_start = if total_runs > 0 { prefix.span_before(0) } else { 0 }
+  let mut cached_span = if total_runs > 0 { T::span(items[0]) } else { 0 }
   Iter::new(fn() {
     while run_idx < total_runs {
-      let run = items[run_idx]
-      let run_span = T::span(run)
-      if offset < run_span {
-        let global_start = prefix.span_before(run_idx)
-        let value = T::address(run, global_start, offset)
+      if offset < cached_span {
+        let value = T::address(items[run_idx], cached_start, offset)
         offset = offset + 1
         return Some(value)
       }
       run_idx = run_idx + 1
       offset = 0
+      if run_idx < total_runs {
+        cached_start = prefix.span_before(run_idx)
+        cached_span = T::span(items[run_idx])
+      }
     }
     None
   })
