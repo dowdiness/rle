@@ -368,3 +368,66 @@ fn prop_splice_equals_delete_insert(pair : (String, String)) -> Bool {
 test "property: splice equals delete then insert" {
   @qc.quick_check_fn(prop_splice_equals_delete_insert)
 }
+
+///|
+/// Property test helper: index-carrying range.
+priv struct PropRange {
+  start : Int
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl @rle.FromRange for PropRange with from_range(start, count) {
+  { start, count }
+}
+
+///|
+impl @rle.Addressable for PropRange with address(self, _global_start, offset) {
+  self.start + offset
+}
+
+///|
+impl @rle.HasLength for PropRange with length(self) {
+  self.count
+}
+
+///|
+impl @rle.Spanning for PropRange with span(self) {
+  self.count
+}
+
+///|
+impl @rle.Mergeable for PropRange with can_merge(a, b) {
+  a.start + a.count == b.start
+}
+
+///|
+impl @rle.Mergeable for PropRange with merge(a, b) {
+  { start: a.start, count: a.count + b.count }
+}
+
+///|
+/// Property: from_sorted_ints → iter_units round-trip preserves values.
+/// Takes arbitrary non-negative ints, sorts and deduplicates, then verifies round-trip.
+fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
+  // Transform to strictly sorted non-negative ints
+  let filtered = raw.filter(fn(x) { x >= 0 && x < 10000 })
+  let sorted = filtered.copy()
+  sorted.sort()
+  // Deduplicate
+  let deduped : Array[Int] = []
+  for v in sorted {
+    match deduped.last() {
+      Some(prev) => if v != prev { deduped.push(v) }
+      None => deduped.push(v)
+    }
+  }
+  let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(deduped)
+  let result = rle.iter_units().collect()
+  result == deduped
+}
+
+///|
+test "property: from_sorted_ints → iter_units round-trip" {
+  @qc.quick_check_fn(prop_from_sorted_iter_roundtrip)
+}
