@@ -136,3 +136,72 @@ test "Rle extend with all-zero-span does not bump version" {
   // Content unchanged
   inspect(a.runs.0[0], content="hello")
 }
+
+///|
+/// Whitebox test helper: index-carrying range for testing FromRange.
+priv struct WbRange {
+  start : Int
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl FromRange for WbRange with from_range(start, count) {
+  { start, count }
+}
+
+///|
+impl HasLength for WbRange with length(self) {
+  self.count
+}
+
+///|
+impl Spanning for WbRange with span(self) {
+  self.count
+}
+
+///|
+impl Mergeable for WbRange with can_merge(a, b) {
+  a.start + a.count == b.start
+}
+
+///|
+impl Mergeable for WbRange with merge(a, b) {
+  { start: a.start, count: a.count + b.count }
+}
+
+///|
+test "invariant: from_sorted_ints no adjacent mergeable runs" {
+  let runs : Runs[WbRange] = Runs::from_sorted_ints([0, 1, 2, 5, 6, 7, 10])
+  // Verify no adjacent runs are mergeable
+  for i = 0; i < runs.0.length() - 1; i = i + 1 {
+    inspect(Mergeable::can_merge(runs.0[i], runs.0[i + 1]), content="false")
+  }
+}
+
+///|
+test "invariant: from_sorted_ints no zero-span runs" {
+  let runs : Runs[WbRange] = Runs::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  for item in runs.0 {
+    inspect(Spanning::span(item) > 0, content="true")
+  }
+}
+
+///|
+test "invariant: from_sorted_ints groups have correct starts" {
+  let runs : Runs[WbRange] = Runs::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  inspect(runs.0.length(), content="2")
+  inspect(runs.0[0].start, content="0")
+  inspect(runs.0[0].count, content="3")
+  inspect(runs.0[1].start, content="5")
+  inspect(runs.0[1].count, content="3")
+}
+
+///|
+test "invariant: from_sorted_ints dedup produces correct groups" {
+  let runs : Runs[WbRange] = Runs::from_sorted_ints([1, 1, 1, 2, 3, 5, 5])
+  inspect(runs.0.length(), content="2")
+  inspect(runs.0[0].start, content="1")
+  inspect(runs.0[0].count, content="3")
+  inspect(runs.0[1].start, content="5")
+  inspect(runs.0[1].count, content="1")
+}

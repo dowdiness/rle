@@ -59,6 +59,50 @@ pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
 }
 
 ///|
+/// Construct Runs from a sorted array of integers.
+///
+/// Groups consecutive integers into runs via `FromRange`, then feeds
+/// them through `from_array_batch` for stack-merge normalization.
+///
+/// **Deduplication contract:** Duplicate values in the input are silently
+/// skipped. This is a stated guarantee, not incidental behavior — CRDT
+/// consumers (e.g. graph_diff output from hashset-derived arrays) rely on it.
+///
+/// **Sortedness:** Assumes input is sorted (ascending). Non-sorted input
+/// produces unspecified (not incorrect) grouping.
+///
+/// Precondition: `ints[i-1] + 1` must not overflow `Int` for any `i`.
+pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(
+  ints : Array[Int],
+) -> Runs[T] {
+  if ints.is_empty() {
+    return Runs::new()
+  }
+  let groups : Array[T] = []
+  let mut group_start = ints[0]
+  let mut group_count = 1
+  for i = 1; i < ints.length(); i = i + 1 {
+    let cur = ints[i]
+    if cur == ints[i - 1] {
+      // Duplicate — skip
+      continue
+    }
+    if cur == ints[i - 1] + 1 {
+      // Consecutive — extend group
+      group_count = group_count + 1
+    } else {
+      // Gap — emit current group, start new one
+      groups.push(FromRange::from_range(group_start, group_count))
+      group_start = cur
+      group_count = 1
+    }
+  }
+  // Emit final group
+  groups.push(FromRange::from_range(group_start, group_count))
+  Runs::from_array_batch(groups)
+}
+
+///|
 /// HasLength impl — number of runs
 pub impl[T] HasLength for Runs[T] with length(self : Runs[T]) -> Int {
   self.0.length()

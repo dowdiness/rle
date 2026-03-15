@@ -120,3 +120,31 @@ impl Spanning with span(self) {
 impl Spanning with logical_length(self) {
   self.span()
 }
+
+///|
+/// **FromRange** — construct a run value from an integer range `[start, start+count)`.
+///
+/// Consumers decide what to do with `start`:
+/// - Index-carrying types store it: `LvRange { start, count }`
+/// - Index-free types discard it: `DenseRun { count }`
+///
+/// Used by `Rle::from_sorted_ints` and `Runs::from_sorted_ints` to construct
+/// runs from groups of consecutive integers.
+pub(open) trait FromRange {
+  from_range(start : Int, count : Int) -> Self
+}
+
+///|
+/// **Addressable** — map a position within a run to a domain integer value.
+///
+/// `global_start` is the run's start position derived from prefix sums.
+/// `offset` is 0-based within the run (`0 <= offset < span`).
+///
+/// Consumers decide the mapping:
+/// - Index-carrying: `self.start + offset` (ignores `global_start`)
+/// - Index-free: `global_start + offset` (derives from prefix sums)
+///
+/// Used by `Rle::iter_units` to expand compressed runs into individual integers.
+pub(open) trait Addressable {
+  address(Self, global_start : Int, offset : Int) -> Int
+}

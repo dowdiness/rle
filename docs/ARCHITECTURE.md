@@ -28,7 +28,7 @@ Dependencies flow strictly downward. No circular or upward references.
 
 ### 1. Traits (`traits.mbt`)
 
-Four traits govern what types can be stored in the RLE structure:
+Six traits govern what types can be stored in the RLE structure:
 
 | Trait | Purpose | Required For |
 |-------|---------|--------------|
@@ -36,6 +36,8 @@ Four traits govern what types can be stored in the RLE structure:
 | `Spanning : HasLength` | `span()` and `logical_length()` | Queries: `find`, `span`, `range`, `value_at`, `cursor` |
 | `Mergeable` | `can_merge()` and `merge()` | Mutations: `append`, `concat`, `extend`, `from_array` |
 | `Sliceable` | `slice(start~, end~)` | Positional edits: `split`, `insert`, `delete`, `splice` |
+| `FromRange` | `from_range(start, count)` | Constructors: `from_sorted_ints` |
+| `Addressable` | `address(global_start, offset)` | Expansion: `iter_units` |
 
 **Default chain**: `HasLength::length` ← `Spanning::span` ← `Spanning::logical_length`. If you only implement `length`, all three return the same value. Override `span()` to diverge from `length()`, or `logical_length()` to diverge from `span()`.
 
@@ -50,6 +52,7 @@ Four traits govern what types can be stored in the RLE structure:
 **Key operations**:
 
 - `from_array_batch(arr)` — O(n) stack-merge construction
+- `from_sorted_ints(ints)` — O(n) grouping + stack-merge, requires `FromRange`
 - `append(elem)` — O(1) amortized with `normalize_tail` cascade
 - `find(pos)` — O(n) linear scan
 - `find_fast(sums, pos)` — O(log n) upper-bound binary search on prefix sums
@@ -68,6 +71,12 @@ Wraps `Runs[T]` with two pieces of mutable state:
 - **`version: Int`** — monotonically increasing counter. Bumped on every mutation. Cursors capture this at creation and compare on every operation.
 
 **Mutation protocol**: Every mutating method must call both `bump_version()` and `invalidate()`. Omitting either breaks cursor detection or cache consistency.
+
+**Key operations** (in addition to `Runs` operations):
+
+- `from_sorted_ints(ints)` — wraps `Runs` version
+- `each_with_position(f)` — per-run iteration with prefix-sum-derived positions
+- `iter_units()` — expand runs to individual integers, requires `Addressable`
 
 **Query advantage over Runs**: `Rle::range` uses `find_fast` to binary-search for the starting run (O(log n + k)), while `Runs::range` scans linearly from the beginning (O(n)).
 

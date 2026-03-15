@@ -755,3 +755,217 @@ test "Spanning::logical_length - Runs matches span for String" {
   let runs = @rle.Runs::from_string("hello")
   inspect(runs.logical_length() == runs.span(), content="true")
 }
+
+///|
+/// Test helper: index-carrying range type for testing FromRange/Addressable.
+/// Mirrors the spec's LvRange consumer example.
+priv struct TestRange {
+  start : Int
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl @rle.FromRange for TestRange with from_range(start, count) {
+  { start, count }
+}
+
+///|
+impl @rle.Addressable for TestRange with address(self, _global_start, offset) {
+  self.start + offset
+}
+
+///|
+impl @rle.HasLength for TestRange with length(self) {
+  self.count
+}
+
+///|
+impl @rle.Spanning for TestRange with span(self) {
+  self.count
+}
+
+///|
+impl @rle.Mergeable for TestRange with can_merge(a, b) {
+  a.start + a.count == b.start
+}
+
+///|
+impl @rle.Mergeable for TestRange with merge(a, b) {
+  { start: a.start, count: a.count + b.count }
+}
+
+///|
+/// Test helper: index-free dense run type. Tests the global_start + offset path.
+priv struct DenseTestRun {
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl @rle.FromRange for DenseTestRun with from_range(_start, count) {
+  { count, }
+}
+
+///|
+impl @rle.Addressable for DenseTestRun with address(_self, global_start, offset) {
+  global_start + offset
+}
+
+///|
+impl @rle.HasLength for DenseTestRun with length(self) {
+  self.count
+}
+
+///|
+impl @rle.Spanning for DenseTestRun with span(self) {
+  self.count
+}
+
+///|
+impl @rle.Mergeable for DenseTestRun with can_merge(_a, _b) {
+  true
+}
+
+///|
+impl @rle.Mergeable for DenseTestRun with merge(a, b) {
+  { count: a.count + b.count }
+}
+
+///|
+test "Rle::from_sorted_ints empty input" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([])
+  inspect(rle.is_empty(), content="true")
+}
+
+///|
+test "Rle::from_sorted_ints single element" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([5])
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="1")
+}
+
+///|
+test "Rle::from_sorted_ints consecutive" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // All consecutive → one run via from_array_batch merge
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="5")
+}
+
+///|
+test "Rle::from_sorted_ints with gaps" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  // Two groups: [0,1,2] and [5,6,7]
+  inspect(rle.length(), content="2")
+  inspect(rle.span(), content="6")
+}
+
+///|
+test "Rle::from_sorted_ints skips duplicates" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 3, 3])
+  // After dedup: [1, 2, 3] → one run
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="3")
+}
+
+///|
+test "Rle::from_sorted_ints duplicates across gap" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 5, 5, 6])
+  // After dedup: [1, 2] and [5, 6] → two runs
+  inspect(rle.length(), content="2")
+  inspect(rle.span(), content="4")
+}
+
+///|
+test "Rle::from_sorted_ints all duplicates" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([5, 5, 5])
+  // After dedup: [5] → one run with count 1
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="1")
+}
+
+///|
+test "Rle::from_sorted_ints dense run collapses (index-free)" {
+  let rle : @rle.Rle[DenseTestRun] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // DenseTestRun always merges → single run
+  inspect(rle.length(), content="1")
+  inspect(rle.span(), content="5")
+}
+
+///|
+test "Rle::each_with_position on empty" {
+  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let positions : Array[(String, Int, Int)] = []
+  rle.each_with_position(fn(run, start, end) {
+    positions.push((run, start, end))
+  })
+  inspect(positions.length(), content="0")
+}
+
+///|
+test "Rle::each_with_position single run" {
+  let rle = @rle.Rle::from_string("hello")
+  let positions : Array[(String, Int, Int)] = []
+  rle.each_with_position(fn(run, start, end) {
+    positions.push((run, start, end))
+  })
+  inspect(positions.length(), content="1")
+  inspect(positions[0].0, content="hello")
+  inspect(positions[0].1, content="0")
+  inspect(positions[0].2, content="5")
+}
+
+///|
+test "Rle::each_with_position multiple runs (TestRange)" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_array([
+    { start: 0, count: 3 },
+    { start: 5, count: 3 },
+  ])
+  let positions : Array[(Int, Int)] = []
+  rle.each_with_position(fn(_run, start, end) { positions.push((start, end)) })
+  inspect(positions.length(), content="2")
+  inspect(positions[0], content="(0, 3)")
+  inspect(positions[1], content="(3, 6)")
+}
+
+///|
+test "Rle::iter_units empty" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([])
+  let units = rle.iter_units().collect()
+  inspect(units.length(), content="0")
+}
+
+///|
+test "Rle::iter_units consecutive" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 3, 4]")
+}
+
+///|
+test "Rle::iter_units with gaps" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 5, 6, 7]")
+}
+
+///|
+test "Rle::iter_units single element" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([42])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[42]")
+}
+
+///|
+test "Rle::iter_units with duplicates in input" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 5, 5, 6])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[1, 2, 5, 6]")
+}
+
+///|
+test "Rle::iter_units index-free (DenseTestRun)" {
+  let rle : @rle.Rle[DenseTestRun] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // DenseTestRun uses global_start + offset path
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 3, 4]")
+}

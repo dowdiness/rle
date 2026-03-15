@@ -46,9 +46,74 @@ pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
 }
 
 ///|
+/// Construct an Rle from a sorted array of integers.
+///
+/// Groups consecutive integers into runs via `FromRange`, then normalizes
+/// with stack-merge. See `Runs::from_sorted_ints` for deduplication and
+/// sortedness contracts.
+pub fn[T : FromRange + Spanning + Mergeable] Rle::from_sorted_ints(
+  ints : Array[Int],
+) -> Rle[T] {
+  { runs: Runs::from_sorted_ints(ints), prefix: None, version: 0 }
+}
+
+///|
 /// Wrap existing Runs into an Rle with lazy prefix sums
 pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
   { runs, prefix: None, version: 0 }
+}
+
+///|
+/// Iterate runs with their start and end positions derived from prefix sums.
+///
+/// Yields `(run_value, start_position, end_position)` for each run.
+/// Calls `ensure_prefix()` once, then iterates the runs array.
+/// This is the building block for `iter_units` and consumer-defined algorithms.
+pub fn[T : Spanning] Rle::each_with_position(
+  self : Rle[T],
+  f : (T, Int, Int) -> Unit,
+) -> Unit {
+  let prefix = self.ensure_prefix()
+  let mut start = 0
+  for i = 0; i < self.runs.0.length(); i = i + 1 {
+    let run = self.runs.0[i]
+    let end = prefix.spans[i]
+    f(run, start, end)
+    start = end
+  }
+}
+
+///|
+/// Expand each run into individual domain integer values.
+///
+/// Uses prefix sums to derive `global_start` for each run, then calls
+/// `Addressable::address` for each offset `0..span-1` within the run.
+///
+/// **Complexity:** O(total_span) — yields every unit position.
+pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
+  let prefix = self.ensure_prefix()
+  let items = self.runs.0
+  let total_runs = items.length()
+  let mut run_idx = 0
+  let mut offset = 0
+  let mut cached_start = if total_runs > 0 { prefix.span_before(0) } else { 0 }
+  let mut cached_span = if total_runs > 0 { T::span(items[0]) } else { 0 }
+  Iter::new(fn() {
+    while run_idx < total_runs {
+      if offset < cached_span {
+        let value = T::address(items[run_idx], cached_start, offset)
+        offset = offset + 1
+        return Some(value)
+      }
+      run_idx = run_idx + 1
+      offset = 0
+      if run_idx < total_runs {
+        cached_start = prefix.span_before(run_idx)
+        cached_span = T::span(items[run_idx])
+      }
+    }
+    None
+  })
 }
 
 ///|
