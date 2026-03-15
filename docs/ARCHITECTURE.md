@@ -28,7 +28,7 @@ Dependencies flow strictly downward. No circular or upward references.
 
 ### 1. Traits (`traits.mbt`)
 
-Six traits govern what types can be stored in the RLE structure:
+Six traits govern what types can be stored in the RLE structure. The first four define **what a run is** (size, compression, slicing). The last two enable **generic algorithms** over integer-valued runs (construction from sorted ints, expansion back to ints):
 
 | Trait | Purpose | Required For |
 |-------|---------|--------------|
@@ -43,6 +43,13 @@ Six traits govern what types can be stored in the RLE structure:
 
 **Mergeable contract**: `merge` must be associative. The stack-based batch merge processes elements left-to-right and cascades merges backward — without associativity, different insertion orders produce different results. Property tests verify associativity for `String`.
 
+**FromRange + Addressable** — these traits follow the "Compare enables qsort" pattern: the library provides the algorithm (`from_sorted_ints`, `iter_units`), your type provides the behavior. They are independent of each other — implement only what you need. A type that only needs construction implements `FromRange`; a type that only needs expansion implements `Addressable`. Both traits support two design patterns:
+
+- **Index-carrying** types (like `LvRange { start, count }`) store their position in the domain value space. `from_range` stores `start`; `address` uses `self.start + offset`.
+- **Index-free** types (like `DenseRun { count }`) discard `start` — positions are computed from prefix sums at query time. `from_range` ignores `start`; `address` uses `global_start + offset`.
+
+The library never looks inside your type — it only calls the trait methods. This preserves context-freedom: each run's identity is independent of its position in the array.
+
 ### 2. Runs[T] (`runs.mbt`)
 
 `pub struct Runs[T](Array[T])` — a newtype wrapping an array.
@@ -52,7 +59,7 @@ Six traits govern what types can be stored in the RLE structure:
 **Key operations**:
 
 - `from_array_batch(arr)` — O(n) stack-merge construction
-- `from_sorted_ints(ints)` — O(n) grouping + stack-merge, requires `FromRange`
+- `from_sorted_ints(ints)` — O(n) two-phase: group consecutive integers into ranges via `FromRange`, then normalize via stack-merge. Silently deduplicates.
 - `append(elem)` — O(1) amortized with `normalize_tail` cascade
 - `find(pos)` — O(n) linear scan
 - `find_fast(sums, pos)` — O(log n) upper-bound binary search on prefix sums
@@ -74,9 +81,9 @@ Wraps `Runs[T]` with two pieces of mutable state:
 
 **Key operations** (in addition to `Runs` operations):
 
-- `from_sorted_ints(ints)` — wraps `Runs` version
-- `each_with_position(f)` — per-run iteration with prefix-sum-derived positions
-- `iter_units()` — expand runs to individual integers, requires `Addressable`
+- `from_sorted_ints(ints)` — wraps `Runs` version (see below)
+- `each_with_position(f)` — iterates runs with their `[start, end)` positions derived from prefix sums. Positions are computed on the fly, never stored in the runs.
+- `iter_units()` — the inverse of `from_sorted_ints`: expands compressed runs back into individual integers via `Addressable::address`. Returns a lazy `Iter[Int]`.
 
 **Query advantage over Runs**: `Rle::range` uses `find_fast` to binary-search for the starting run (O(log n + k)), while `Runs::range` scans linearly from the beginning (O(n)).
 
@@ -137,6 +144,23 @@ Each element is pushed/popped at most once → O(n) amortized total. Guarantees 
 
 `find_fast` searches the cumulative `spans` array for the smallest `i` where `spans[i] > pos`. This identifies the run containing position `pos`. Standard upper-bound binary search. After the loop, `lo` is the first index where `spans[lo] > pos`, identifying the run containing `pos`.
 
+### Consecutive-Integer Grouping
+
+Used by `from_sorted_ints`. Two-phase algorithm:
+
+```text
+Phase 1 — Group:
+  for each int (skip duplicates):
+    if consecutive with previous: extend current group
+    if gap: emit group via FromRange, start new group
+  emit final group
+
+Phase 2 — Normalize:
+  feed groups through from_array_batch (stack-merge)
+```
+
+Phase 1 is O(n) single-pass. Phase 2 is O(m) where m = number of groups. The normalization step ensures the no-adjacent-mergeable invariant is restored — this matters when a type's `can_merge` is always true (like `DenseRun`), causing all groups to collapse into one.
+
 ### Split-Concat Composition
 
 `insert`, `delete`, and `splice` are composed from `split` and `concat`:
@@ -157,6 +181,7 @@ These produce new `Runs`/`Rle` values (functional style). The original is not mo
 - **Cursor staleness is conservative**: Returns `None` rather than potentially wrong data. No ABA problem due to monotonic versioning.
 - **Functional structural operations**: `split`/`insert`/`delete`/`splice` return new values, avoiding cache invalidation complexity. Only `append`/`extend`/`clear` mutate in place.
 - **Lazy `Slice` views**: `range()` returns `Slice[T]` (bounds only), deferring materialization to `to_inner()` to avoid unnecessary allocation.
+- **Traits not types** for integer ranges: The library ships `FromRange` and `Addressable` traits instead of a concrete `IntRange` type. This preserves context-freedom — the library never stores positions inside runs. Whether a consumer uses index-carrying types (positions stored in the run) or index-free types (positions derived from prefix sums) is invisible to the library. This follows the "Compare enables qsort" pattern: the library provides generic algorithms, consumers provide the types.
 
 ## Test Files
 

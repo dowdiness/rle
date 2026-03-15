@@ -48,9 +48,16 @@ pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
 ///|
 /// Construct an Rle from a sorted array of integers.
 ///
-/// Groups consecutive integers into runs via `FromRange`, then normalizes
-/// with stack-merge. See `Runs::from_sorted_ints` for deduplication and
-/// sortedness contracts.
+/// Convenience wrapper around `Runs::from_sorted_ints` — groups consecutive
+/// integers into compressed runs, then wraps the result with lazy prefix sums.
+///
+/// ```text
+/// Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
+///   → groups: [range(0, 3), range(5, 3)]
+///   → Rle with 2 runs, total span 6
+/// ```
+///
+/// See `Runs::from_sorted_ints` for deduplication and sortedness contracts.
 pub fn[T : FromRange + Spanning + Mergeable] Rle::from_sorted_ints(
   ints : Array[Int],
 ) -> Rle[T] {
@@ -64,11 +71,24 @@ pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
 }
 
 ///|
-/// Iterate runs with their start and end positions derived from prefix sums.
+/// Iterate runs with their start and end positions in the span coordinate space.
 ///
-/// Yields `(run_value, start_position, end_position)` for each run.
-/// Calls `ensure_prefix()` once, then iterates the runs array.
-/// This is the building block for `iter_units` and consumer-defined algorithms.
+/// For each run, calls `f(run, start, end)` where `start` and `end` are
+/// half-open positions `[start, end)` derived from prefix sums — the same
+/// coordinate space used by `find`, `range`, and `split`.
+///
+/// ```text
+/// Rle: ["abc", "de"]  (spans: 3, 2)
+///
+/// each_with_position yields:
+///   f("abc", 0, 3)   — positions [0, 3)
+///   f("de",  3, 5)   — positions [3, 5)
+/// ```
+///
+/// This is the building block for consumer-defined algorithms that need to
+/// know where each run sits in the overall sequence. The positions are
+/// never stored inside the runs — they are computed on the fly from the
+/// lazy prefix sums, keeping runs context-free and reusable.
 pub fn[T : Spanning] Rle::each_with_position(
   self : Rle[T],
   f : (T, Int, Int) -> Unit,
@@ -84,27 +104,42 @@ pub fn[T : Spanning] Rle::each_with_position(
 }
 
 ///|
-/// Expand each run into individual domain integer values.
+/// Expand compressed runs back into individual integer values.
 ///
-/// Uses prefix sums to derive `global_start` for each run, then calls
-/// `Addressable::address` for each offset `0..span-1` within the run.
+/// This is the inverse of `from_sorted_ints`: where `from_sorted_ints`
+/// compresses `[0, 1, 2, 5, 6, 7]` into two runs, `iter_units` expands
+/// those runs back into `[0, 1, 2, 5, 6, 7]`.
 ///
-/// **Complexity:** O(total_span) — yields every unit position.
+/// For each run, the library computes `global_start` from prefix sums,
+/// then calls `Addressable::address(run, global_start, offset)` for each
+/// offset `0..span-1`. The `Addressable` implementation decides how to
+/// turn that into a domain value — see the trait docs for details.
+///
+/// Returns a lazy `Iter[Int]` — values are computed on demand, not
+/// materialized into an array. Call `.collect()` if you need an array.
+///
+/// **Complexity:** O(total_span) — one yield per expanded integer.
 pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
   let prefix = self.ensure_prefix()
   let items = self.runs.0
   let total_runs = items.length()
+  // Iterator state: which run we're in, and which offset within that run.
   let mut run_idx = 0
   let mut offset = 0
+  // Cache per-run values to avoid recomputing on every yield.
+  // These are updated only when we advance to a new run.
   let mut cached_start = if total_runs > 0 { prefix.span_before(0) } else { 0 }
   let mut cached_span = if total_runs > 0 { T::span(items[0]) } else { 0 }
   Iter::new(fn() {
     while run_idx < total_runs {
       if offset < cached_span {
+        // Still within the current run — yield the next domain value.
+        // Addressable::address translates (run, global_start, offset) → Int.
         let value = T::address(items[run_idx], cached_start, offset)
         offset = offset + 1
         return Some(value)
       }
+      // Current run exhausted — advance to the next one and refresh cache.
       run_idx = run_idx + 1
       offset = 0
       if run_idx < total_runs {

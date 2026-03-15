@@ -59,46 +59,72 @@ pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
 }
 
 ///|
-/// Construct Runs from a sorted array of integers.
+/// Construct Runs from a sorted array of integers by grouping consecutive values.
 ///
-/// Groups consecutive integers into runs via `FromRange`, then feeds
-/// them through `from_array_batch` for stack-merge normalization.
+/// This is a two-phase algorithm:
 ///
-/// **Deduplication contract:** Duplicate values in the input are silently
-/// skipped. This is a stated guarantee, not incidental behavior — CRDT
-/// consumers (e.g. graph_diff output from hashset-derived arrays) rely on it.
+/// 1. **Group** — walk the sorted array, collecting consecutive integers into
+///    ranges. `[0, 1, 2, 5, 6, 7]` becomes two groups: `[0..3)` and `[5..8)`.
+///    Each group is constructed via `FromRange::from_range(start, count)`.
 ///
-/// **Sortedness:** Assumes input is sorted (ascending). Non-sorted input
-/// produces unspecified (not incorrect) grouping.
+/// 2. **Normalize** — feed the groups through `from_array_batch` to restore
+///    the no-adjacent-mergeable-runs invariant. For types where `can_merge`
+///    checks adjacency (like `LvRange`), distinct groups stay separate. For
+///    types where `can_merge` is always true (like `DenseRun`), everything
+///    collapses into a single run — maximum compression.
 ///
-/// Precondition: `ints[i-1] + 1` must not overflow `Int` for any `i`.
+/// ## Deduplication
+///
+/// Duplicate values are silently skipped. This is a stated guarantee, not
+/// incidental behavior — consumers like CRDT's `graph_diff` (which may
+/// produce duplicates from hashset-derived arrays) rely on it.
+///
+/// ```text
+/// from_sorted_ints([1, 1, 2, 3, 5, 5])
+///   dedup → [1, 2, 3, 5]
+///   group → [range(1, 3), range(5, 1)]
+/// ```
+///
+/// ## Sortedness
+///
+/// Assumes input is sorted in ascending order. Non-sorted input produces
+/// unspecified (not incorrect) grouping.
+///
+/// ## Precondition
+///
+/// `ints[i-1] + 1` must not overflow `Int` for any `i`.
 pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(
   ints : Array[Int],
 ) -> Runs[T] {
   if ints.is_empty() {
     return Runs::new()
   }
+  // Phase 1: Group consecutive integers into ranges.
+  // We track the current group's start value and count, emitting a run
+  // via FromRange::from_range whenever we encounter a gap or duplicate.
   let groups : Array[T] = []
   let mut group_start = ints[0]
   let mut group_count = 1
   for i = 1; i < ints.length(); i = i + 1 {
     let cur = ints[i]
     if cur == ints[i - 1] {
-      // Duplicate — skip
+      // Same value as previous — skip (deduplication contract)
       continue
     }
     if cur == ints[i - 1] + 1 {
-      // Consecutive — extend group
+      // Next consecutive integer — extend the current group
       group_count = group_count + 1
     } else {
-      // Gap — emit current group, start new one
+      // Gap detected — emit the current group and start a new one
       groups.push(FromRange::from_range(group_start, group_count))
       group_start = cur
       group_count = 1
     }
   }
-  // Emit final group
+  // Don't forget the last group (the loop only emits on gaps)
   groups.push(FromRange::from_range(group_start, group_count))
+  // Phase 2: Normalize via stack-merge to restore the invariant.
+  // This is the same normalization used by from_array and concat.
   Runs::from_array_batch(groups)
 }
 

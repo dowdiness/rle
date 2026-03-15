@@ -124,12 +124,27 @@ impl Spanning with logical_length(self) {
 ///|
 /// **FromRange** — construct a run value from an integer range `[start, start+count)`.
 ///
-/// Consumers decide what to do with `start`:
-/// - Index-carrying types store it: `LvRange { start, count }`
-/// - Index-free types discard it: `DenseRun { count }`
+/// This trait enables the generic `from_sorted_ints` algorithm: given sorted
+/// integers like `[0, 1, 2, 5, 6, 7]`, the library groups consecutive values
+/// into ranges (`[0..3)` and `[5..8)`) and calls `from_range` to build each run.
 ///
-/// Used by `Rle::from_sorted_ints` and `Runs::from_sorted_ints` to construct
-/// runs from groups of consecutive integers.
+/// The library does not prescribe what your run type looks like — it only needs
+/// to know how to construct one from a start value and a count.
+///
+/// ## Index-Carrying vs Index-Free
+///
+/// Your type decides whether to store the `start` value or discard it:
+///
+/// - **Index-carrying** (e.g., `LvRange { start, count }`): stores `start`
+///   as a domain identifier. The run knows its own position in the value space.
+///   Use this when values have gaps (e.g., Lamport version ranges in a CRDT).
+///
+/// - **Index-free** (e.g., `DenseRun { count }`): discards `start` — the
+///   library's prefix sums will compute positions when needed. Use this when
+///   values are dense from zero (no gaps).
+///
+/// This is the same pattern as MoonBit's `Compare` enabling generic `qsort`:
+/// the library provides the algorithm, your type provides the construction.
 pub(open) trait FromRange {
   from_range(start : Int, count : Int) -> Self
 }
@@ -137,14 +152,30 @@ pub(open) trait FromRange {
 ///|
 /// **Addressable** — map a position within a run to a domain integer value.
 ///
-/// `global_start` is the run's start position derived from prefix sums.
-/// `offset` is 0-based within the run (`0 <= offset < span`).
+/// This trait enables the generic `iter_units` algorithm: given compressed
+/// runs, expand them back into individual integers. For each unit offset
+/// within a run, `address` returns the corresponding domain value.
 ///
-/// Consumers decide the mapping:
-/// - Index-carrying: `self.start + offset` (ignores `global_start`)
-/// - Index-free: `global_start + offset` (derives from prefix sums)
+/// ## Parameters
 ///
-/// Used by `Rle::iter_units` to expand compressed runs into individual integers.
+/// - `global_start`: the run's start position in the RLE, derived from prefix
+///   sums (the cumulative span of all preceding runs). The library computes
+///   this automatically — you don't need to store or track it.
+///
+/// - `offset`: 0-based index within the current run (`0 <= offset < span`).
+///
+/// ## Index-Carrying vs Index-Free
+///
+/// Your type decides which parameter to use:
+///
+/// - **Index-carrying** (e.g., `LvRange`): `self.start + offset` — the run
+///   knows its own start, so `global_start` is ignored.
+///
+/// - **Index-free** (e.g., `DenseRun`): `global_start + offset` — the run
+///   doesn't store a start, so positions are derived from prefix sums.
+///
+/// Both approaches produce correct results. The library doesn't know or care
+/// which one your type uses — it just calls `address` and gets an `Int` back.
 pub(open) trait Addressable {
   address(Self, global_start : Int, offset : Int) -> Int
 }
