@@ -43,7 +43,7 @@ Six traits govern what types can be stored in the RLE structure. The first four 
 
 **Mergeable contract**: `merge` must be associative. The stack-based batch merge processes elements left-to-right and cascades merges backward — without associativity, different insertion orders produce different results. Property tests verify associativity for `String`.
 
-**FromRange + Addressable** — these traits follow the "Compare enables qsort" pattern: the library provides the algorithm (`from_sorted_ints`, `iter_units`), your type provides the behavior. They are independent of each other — implement only what you need. A type that only needs construction implements `FromRange`; a type that only needs expansion implements `Addressable`. Both traits support two design patterns:
+**FromRange + Addressable** — these are **algorithm-by-trait** traits: the library provides generic algorithms (`from_sorted_ints`, `iter_units`), and your type provides the behavior by implementing the trait. They are independent of each other — implement only what you need. A type that only needs construction implements `FromRange`; a type that only needs expansion implements `Addressable`. Both traits support two design patterns:
 
 - **Index-carrying** types (like `LvRange { start, count }`) store their position in the domain value space. `from_range` stores `start`; `address` uses `self.start + offset`.
 - **Index-free** types (like `DenseRun { count }`) discard `start` — positions are computed from prefix sums at query time. `from_range` ignores `start`; `address` uses `global_start + offset`.
@@ -181,7 +181,7 @@ These produce new `Runs`/`Rle` values (functional style). The original is not mo
 - **Cursor staleness is conservative**: Returns `None` rather than potentially wrong data. No ABA problem due to monotonic versioning.
 - **Functional structural operations**: `split`/`insert`/`delete`/`splice` return new values, avoiding cache invalidation complexity. Only `append`/`extend`/`clear` mutate in place.
 - **Lazy `Slice` views**: `range()` returns `Slice[T]` (bounds only), deferring materialization to `to_inner()` to avoid unnecessary allocation.
-- **Traits not types** for integer ranges: The library ships `FromRange` and `Addressable` traits instead of a concrete `IntRange` type. This preserves context-freedom — the library never stores positions inside runs. Whether a consumer uses index-carrying types (positions stored in the run) or index-free types (positions derived from prefix sums) is invisible to the library. This follows the "Compare enables qsort" pattern: the library provides generic algorithms, consumers provide the types.
+- **Algorithm-by-trait** for integer ranges: The library ships `FromRange` and `Addressable` traits instead of a concrete `IntRange` type. This preserves context-freedom — the library never stores positions inside runs. Whether a consumer uses index-carrying types (positions stored in the run) or index-free types (positions derived from prefix sums) is invisible to the library. The library provides generic algorithms, consumers provide the types.
 
 ## Test Files
 

@@ -143,8 +143,11 @@ impl Spanning with logical_length(self) {
 ///   library's prefix sums will compute positions when needed. Use this when
 ///   values are dense from zero (no gaps).
 ///
-/// This is the same pattern as MoonBit's `Compare` enabling generic `qsort`:
-/// the library provides the algorithm, your type provides the construction.
+/// This follows the **algorithm-by-trait** pattern: the library provides the
+/// algorithm (`from_sorted_ints`), your type provides the behavior
+/// (`from_range`). Just as `Compare` lets you write a generic sort without
+/// knowing the element type, `FromRange` lets the library compress sorted
+/// integers without knowing your run type.
 pub(open) trait FromRange {
   from_range(start : Int, count : Int) -> Self
 }
