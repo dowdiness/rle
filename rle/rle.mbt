@@ -245,9 +245,9 @@ pub fn[T : Mergeable + Spanning] Rle::concat(
 }
 
 ///|
-/// Extend in-place - invalidates cache and bumps version only if mutation occurs.
-/// Note: bumps version if other is non-empty, even if all items are filtered
-/// (span <= 0). This is conservative; callers should pre-filter if needed.
+/// Extend in-place — invalidates cache and bumps version only if actual
+/// mutation occurs. Detects mutation by checking both the run count and
+/// the last run's span (a merge changes span even when count is unchanged).
 pub fn[T : Mergeable + Spanning] Rle::extend(
   self : Rle[T],
   other : Rle[T],
@@ -256,9 +256,17 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
     return
   }
   let old_count = self.runs.length()
+  let old_last_span = match self.runs.get(old_count - 1) {
+    Some(r) => T::span(r)
+    None => 0
+  }
   self.runs.extend(other.runs)
-  // Only bump version if actual mutation occurred
-  if self.runs.length() != old_count || old_count > 0 {
+  let new_count = self.runs.length()
+  let new_last_span = match self.runs.get(new_count - 1) {
+    Some(r) => T::span(r)
+    None => 0
+  }
+  if new_count != old_count || new_last_span != old_last_span {
     self.bump_version()
     self.invalidate()
   }

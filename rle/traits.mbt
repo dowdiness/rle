@@ -90,8 +90,9 @@ impl HasLength with is_empty(self) {
 ///
 /// ## When to Override
 ///
-/// - **Simple types** (strings, pixel runs): implement only `HasLength::length`.
-///   All three methods return the same value.
+/// - **Simple types** (strings, pixel runs): implement `span()` returning the
+///   same value as `length()`. MoonBit requires an explicit `impl Spanning`
+///   declaration even when using the default behavior.
 ///
 /// - **CRDT tombstones / gap buffers**: override `logical_length` to return
 ///   visible content size, while `span` counts all elements including deleted

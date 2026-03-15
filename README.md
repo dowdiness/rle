@@ -155,11 +155,14 @@ impl @rle.HasLength for PixelRun with length(self) {
   self.count
 }
 
-// span() defaults to length(), so no need to implement Spanning::span
-// unless span differs from length (e.g., CRDT tombstones).
+// span() delegates to length() here — both return pixel count.
+// Override span() only when it should differ from length (e.g., CRDT tombstones).
+impl @rle.Spanning for PixelRun with span(self) {
+  self.count
+}
 ```
 
-With these three impls (and `Spanning::span` defaulting to `length`), you can use `append`, `find`, `value_at`, `range`, `concat`, `from_array`, and `cursor`. You cannot use `split`/`insert`/`delete`/`splice` because `PixelRun` is not `Sliceable`.
+With these four impls, you can use `append`, `find`, `value_at`, `range`, `concat`, `from_array`, and `cursor`. You cannot use `split`/`insert`/`delete`/`splice` because `PixelRun` is not `Sliceable`.
 
 ### Full Example: AuthoredRun (with Sliceable)
 

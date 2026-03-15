@@ -24,6 +24,8 @@ impl @rle.HasLength for PixelRun with length(self : PixelRun) -> Int {
 }
 
 ///|
+/// span() delegates to length() here — both return pixel count.
+/// Override span() only when it should differ from length (e.g., CRDT tombstones).
 impl @rle.Spanning for PixelRun with span(self : PixelRun) -> Int {
   self.count
 }
