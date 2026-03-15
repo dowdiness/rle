@@ -52,6 +52,25 @@ pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
 }
 
 ///|
+/// Iterate runs with their start and end positions derived from prefix sums.
+///
+/// Yields `(run_value, start_position, end_position)` for each run.
+/// Calls `ensure_prefix()` once, then iterates the runs array.
+/// This is the building block for `iter_units` and consumer-defined algorithms.
+pub fn[T : Spanning] Rle::each_with_position(
+  self : Rle[T],
+  f : (T, Int, Int) -> Unit,
+) -> Unit {
+  let prefix = self.ensure_prefix()
+  for i = 0; i < self.runs.0.length(); i = i + 1 {
+    let run = self.runs.0[i]
+    let start = prefix.span_before(i)
+    let end = prefix.spans[i]
+    f(run, start, end)
+  }
+}
+
+///|
 /// Extract the underlying Runs
 pub fn[T] Rle::to_runs(self : Rle[T]) -> Runs[T] {
   self.runs

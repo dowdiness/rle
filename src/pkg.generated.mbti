@@ -75,6 +75,7 @@ pub fn[T] Rle::clear(Self[T]) -> Unit
 pub fn[T : Mergeable + Spanning] Rle::concat(Self[T], Self[T]) -> Self[T]
 pub fn[T] Rle::cursor(Self[T]) -> RleCursor[T]
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::delete(Self[T], start~ : Int, end~ : Int) -> Result[Self[T], RleError]
+pub fn[T : Spanning] Rle::each_with_position(Self[T], (T, Int, Int) -> Unit) -> Unit
 pub fn[T : Mergeable + Spanning] Rle::extend(Self[T], Self[T]) -> Unit
 pub fn[T : Spanning] Rle::find(Self[T], Int) -> RunPos?
 pub fn[T : Mergeable + Spanning] Rle::from_array(Array[T]) -> Self[T]
@@ -181,6 +182,14 @@ pub impl @moonbitlang/quickcheck.Shrink for Slice[String]
 pub using @builtin {type Option as MayStale}
 
 // Traits
+pub(open) trait Addressable {
+  address(Self, Int, Int) -> Int
+}
+
+pub(open) trait FromRange {
+  from_range(Int, Int) -> Self
+}
+
 pub(open) trait HasLength {
   length(Self) -> Int
   is_empty(Self) -> Bool = _

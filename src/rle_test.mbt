@@ -755,3 +755,113 @@ test "Spanning::logical_length - Runs matches span for String" {
   let runs = @rle.Runs::from_string("hello")
   inspect(runs.logical_length() == runs.span(), content="true")
 }
+
+///|
+/// Test helper: index-carrying range type for testing FromRange/Addressable.
+/// Mirrors the spec's LvRange consumer example.
+priv struct TestRange {
+  start : Int
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl @rle.FromRange for TestRange with from_range(start, count) {
+  { start, count }
+}
+
+///|
+impl @rle.Addressable for TestRange with address(self, _global_start, offset) {
+  self.start + offset
+}
+
+///|
+impl @rle.HasLength for TestRange with length(self) {
+  self.count
+}
+
+///|
+impl @rle.Spanning for TestRange with span(self) {
+  self.count
+}
+
+///|
+impl @rle.Mergeable for TestRange with can_merge(a, b) {
+  a.start + a.count == b.start
+}
+
+///|
+impl @rle.Mergeable for TestRange with merge(a, b) {
+  { start: a.start, count: a.count + b.count }
+}
+
+///|
+/// Test helper: index-free dense run type. Tests the global_start + offset path.
+priv struct DenseTestRun {
+  count : Int
+} derive(Show, Eq)
+
+///|
+impl @rle.FromRange for DenseTestRun with from_range(_start, count) {
+  { count, }
+}
+
+///|
+impl @rle.Addressable for DenseTestRun with address(_self, global_start, offset) {
+  global_start + offset
+}
+
+///|
+impl @rle.HasLength for DenseTestRun with length(self) {
+  self.count
+}
+
+///|
+impl @rle.Spanning for DenseTestRun with span(self) {
+  self.count
+}
+
+///|
+impl @rle.Mergeable for DenseTestRun with can_merge(_a, _b) {
+  true
+}
+
+///|
+impl @rle.Mergeable for DenseTestRun with merge(a, b) {
+  { count: a.count + b.count }
+}
+
+///|
+test "Rle::each_with_position on empty" {
+  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let positions : Array[(String, Int, Int)] = []
+  rle.each_with_position(fn(run, start, end) {
+    positions.push((run, start, end))
+  })
+  inspect(positions.length(), content="0")
+}
+
+///|
+test "Rle::each_with_position single run" {
+  let rle = @rle.Rle::from_string("hello")
+  let positions : Array[(String, Int, Int)] = []
+  rle.each_with_position(fn(run, start, end) {
+    positions.push((run, start, end))
+  })
+  inspect(positions.length(), content="1")
+  inspect(positions[0].0, content="hello")
+  inspect(positions[0].1, content="0")
+  inspect(positions[0].2, content="5")
+}
+
+///|
+test "Rle::each_with_position multiple runs (TestRange)" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_array([
+    { start: 0, count: 3 },
+    { start: 5, count: 3 },
+  ])
+  let positions : Array[(Int, Int)] = []
+  rle.each_with_position(fn(_run, start, end) { positions.push((start, end)) })
+  inspect(positions.length(), content="2")
+  inspect(positions[0], content="(0, 3)")
+  inspect(positions[1], content="(3, 6)")
+}
