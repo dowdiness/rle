@@ -80,12 +80,14 @@ pub fn[T : Mergeable + Spanning] Rle::extend(Self[T], Self[T]) -> Unit
 pub fn[T : Spanning] Rle::find(Self[T], Int) -> RunPos?
 pub fn[T : Mergeable + Spanning] Rle::from_array(Array[T]) -> Self[T]
 pub fn[T] Rle::from_runs(Runs[T]) -> Self[T]
+pub fn[T : FromRange + Spanning + Mergeable] Rle::from_sorted_ints(Array[Int]) -> Self[T]
 pub fn Rle::from_string(String) -> Self[String]
 pub fn[T] Rle::get(Self[T], Int) -> T?
 pub fn[T] Rle::get_version(Self[T]) -> Int
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(Self[T], Int, Self[T]) -> Result[Self[T], RleError]
 pub fn[T] Rle::iter(Self[T]) -> Iter[T]
 pub fn Rle::iter_chars(Self[String]) -> Iter[Char]
+pub fn[T : Addressable + Spanning] Rle::iter_units(Self[T]) -> Iter[Int]
 pub fn[T] Rle::new() -> Self[T]
 pub fn[T : Spanning] Rle::range(Self[T], start~ : Int, end~ : Int) -> Result[Iter[Slice[T]], RleError]
 pub fn[T : Spanning] Rle::range_clamped(Self[T], start~ : Int, end~ : Int) -> Iter[Slice[T]]
@@ -143,6 +145,7 @@ pub fn[T : Spanning] Runs::find(Self[T], Int) -> RunPos?
 pub fn[T] Runs::find_fast(Self[T], PrefixSums, Int) -> RunPos?
 pub fn[T : Mergeable + Spanning] Runs::from_array(Array[T]) -> Self[T]
 pub fn[T : Mergeable + Spanning] Runs::from_array_batch(Array[T]) -> Self[T]
+pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(Array[Int]) -> Self[T]
 pub fn Runs::from_string(String) -> Self[String]
 #alias("_[_]")
 pub fn[T] Runs::get(Self[T], Int) -> T?
