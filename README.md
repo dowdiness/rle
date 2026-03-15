@@ -336,25 +336,25 @@ Position lookups use binary search over cached prefix sums, giving O(log n) inst
 Run benchmarks with:
 
 ```bash
-moon bench --package rle --release
+moon bench --release
 ```
 
 ## Examples
 
-The `example/` directory contains runnable demos:
+The `src/example/` directory contains runnable demos:
 
-- **`example/`** — Basic string operations, cursor usage
-- **`example/string/`** — String-specific operations (find, split, range, cursor staleness)
-- **`example/pixel/`** — Custom `PixelRun` type (numeric, no Sliceable)
-- **`example/authored/`** — Custom `AuthoredRun` type (with Sliceable, demonstrates selective merging)
+- **`src/example/`** — Basic string operations, cursor usage
+- **`src/example/string/`** — String-specific operations (find, split, range, cursor staleness)
+- **`src/example/pixel/`** — Custom `PixelRun` type (numeric, no Sliceable)
+- **`src/example/authored/`** — Custom `AuthoredRun` type (with Sliceable, demonstrates selective merging)
 
 Run any example with:
 
 ```bash
-moon run example           # Basic demo
-moon run example/pixel     # PixelRun demo
-moon run example/authored  # AuthoredRun demo
-moon run example/string    # String demo
+moon run src/example           # Basic demo
+moon run src/example/pixel     # PixelRun demo
+moon run src/example/authored  # AuthoredRun demo
+moon run src/example/string    # String demo
 ```
 
 ## License

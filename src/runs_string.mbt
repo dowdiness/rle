@@ -47,8 +47,20 @@ pub fn slice_string_view(
   if start < 0 || end > len || start > end {
     return Err(SliceError::IndexOutOfBounds)
   }
-  if (start < len && { let cu = text.code_unit_at(start); cu >= 0xDC00 && cu <= 0xDFFF }) ||
-    (end < len && { let cu = text.code_unit_at(end); cu >= 0xDC00 && cu <= 0xDFFF }) {
+  if (
+      start < len &&
+      ({
+        let cu = text.code_unit_at(start)
+        cu >= 0xDC00 && cu <= 0xDFFF
+      })
+    ) ||
+    (
+      end < len &&
+      ({
+        let cu = text.code_unit_at(end)
+        cu >= 0xDC00 && cu <= 0xDFFF
+      })
+    ) {
     return Err(SliceError::InvalidIndex)
   }
   Ok(text[start:end].to_string())

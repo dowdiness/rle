@@ -19,13 +19,12 @@ RLE library in MoonBit — compressed sequences with O(log n) lookup via lazy pr
 ```bash
 moon check            # Type check
 moon test             # Run all tests
-moon test --package rle        # Tests with output
-moon bench --package rle --release  # Benchmarks (release mode required)
+moon bench --release  # Benchmarks (release mode required)
 moon build            # Build
 moon update           # Update dependencies
 ```
 
-All code lives in `rle/` — single package, no sub-packages.
+All code lives in `src/` — single package (`dowdiness/rle`), no sub-packages.
 
 ## Architecture Rules
 
@@ -68,11 +67,11 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 | Package | Purpose |
 |---------|---------|
-| `rle/` | Core library — traits, runs, prefix sums, rle wrapper, cursor, slice, errors |
-| `example/` | Basic string usage demo |
-| `example/string/` | String-specific operations demo |
-| `example/pixel/` | Custom `PixelRun` type demo (no Sliceable) |
-| `example/authored/` | Custom `AuthoredRun` type demo (with Sliceable) |
+| `src/` | Core library — traits, runs, prefix sums, rle wrapper, cursor, slice, errors |
+| `src/example/` | Basic string usage demo |
+| `src/example/string/` | String-specific operations demo |
+| `src/example/pixel/` | Custom `PixelRun` type demo (no Sliceable) |
+| `src/example/authored/` | Custom `AuthoredRun` type demo (with Sliceable) |
 
 ## Documentation
 

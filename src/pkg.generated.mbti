@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "dowdiness/rle/rle"
+package "dowdiness/rle"
 
 import {
   "moonbitlang/core/builtin",
