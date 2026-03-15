@@ -1,10 +1,36 @@
 ///|
 /// Result type for cursor operations that may become stale.
-/// Some(value) when cursor is valid, None when stale due to Rle mutations.
+/// `Some(value)` when cursor is valid, `None` when stale due to Rle mutations.
+/// This is a type alias for `T?` — its purpose is documentation, not runtime
+/// overhead. When you see `MayStale[Int]` as a return type, `None` means
+/// "the cursor is stale" rather than "value not found."
 pub type MayStale[T] = T?
 
 ///|
-/// Cursor for efficient sequential traversal of Rle
+/// **RleCursor** — sequential traversal with automatic staleness detection.
+///
+/// A cursor captures the `Rle`'s `version` at creation time. On every
+/// operation, it compares its captured version against the current version.
+/// If they differ (meaning the `Rle` was mutated), the cursor is **stale**
+/// and all operations return `None` or `false`. This is conservative: the
+/// cursor refuses to return potentially wrong data rather than guessing.
+///
+/// The version counter is monotonically increasing, so there is no ABA
+/// problem — even if the data returns to its original state after two
+/// mutations, the version number is higher and staleness is correctly detected.
+///
+/// ## Typical Usage
+///
+/// ```text
+/// let cursor = rle.cursor()   // captures version
+/// cursor.advance(5)           // move forward
+/// cursor.current_item()       // read current run
+/// rle.append(x)               // mutation! version bumps
+/// cursor.is_stale()           // true — cursor is now invalid
+/// cursor.next()               // None — refuses to operate
+/// ```
+///
+/// Create a new cursor after mutations to continue traversal.
 pub struct RleCursor[T] {
   rle : Rle[T]
   version : Int // Captured version at cursor creation
@@ -135,7 +161,8 @@ pub fn[T : Spanning] RleCursor::retreat(self : RleCursor[T], n : Int) -> Bool {
 }
 
 ///|
-/// Seek to absolute position (returns false if stale)
+/// Seek to absolute position — O(log n) via `Rle::find` binary search.
+/// Returns false if stale or if `pos` is out of bounds.
 pub fn[T : Spanning] RleCursor::seek(self : RleCursor[T], pos : Int) -> Bool {
   if self.is_stale() {
     return false
@@ -211,8 +238,11 @@ pub fn[T : Spanning] RleCursor::prev(self : RleCursor[T]) -> T? {
 }
 
 ///|
-/// Iterate forward from current position, yielding (item, offset_in_run, global_pos) per atom
-/// Returns empty iterator if stale
+/// Iterate forward from current position, yielding `(item, offset_in_run, global_pos)`
+/// for each atomic position (per unit of span, not per run).
+///
+/// For a string run "hello" (span 5), this yields 5 entries, each pointing to
+/// the same run object with increasing offsets. Returns empty iterator if stale.
 pub fn[T : Spanning] RleCursor::iter_forward(
   self : RleCursor[T],
 ) -> Iter[(T, Int, Int)] {

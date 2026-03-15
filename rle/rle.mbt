@@ -1,5 +1,30 @@
 ///|
-/// Runs with lazy prefix sums - convenience wrapper for O(log n) operations
+/// **Rle** — run-length encoded sequence with lazy O(log n) position lookup.
+///
+/// Wraps `Runs[T]` with two pieces of mutable state:
+///
+/// - **`prefix`** (`PrefixSums?`): cached cumulative span/content arrays.
+///   Set to `None` on every mutation; rebuilt lazily on the next query.
+///   This means consecutive mutations (e.g., multiple `append` calls) pay
+///   no prefix-rebuild cost — the rebuild is amortized over queries.
+///
+/// - **`version`** (`Int`): monotonically increasing counter, bumped on
+///   every mutation. Cursors capture this value at creation and compare on
+///   each operation — if they differ, the cursor is stale and refuses to
+///   return data. This is a form of optimistic concurrency control.
+///
+/// ## Mutation Protocol
+///
+/// Every mutating method **must** call both:
+/// 1. `self.bump_version()` — so existing cursors detect the change
+/// 2. `self.invalidate()` — so the next query triggers a prefix rebuild
+///
+/// ## When to Use `Rle` vs `Runs`
+///
+/// Use `Rle` when you perform repeated queries (find, span, range) between
+/// mutations — the cached prefix sums make these O(log n) or O(1).
+/// Use `Runs` directly for one-shot operations or when you manage your own
+/// `PrefixSums` via `Runs::prefix_sums()` and `Runs::find_fast()`.
 pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums? // None = stale, needs rebuild
@@ -123,7 +148,13 @@ pub fn[T : Spanning] Rle::find(self : Rle[T], pos : Int) -> RunPos? {
 }
 
 ///|
-/// Iterate slices in range [start, end) - uses cache
+/// Iterate slices in range [start, end) — O(log n + k) with cache.
+///
+/// Unlike `Runs::range` (which scans linearly from the beginning),
+/// this method uses `find_fast` to binary-search for the starting run,
+/// then scans forward only through the k runs overlapping the range.
+/// For queries near the end of a long sequence, this avoids scanning
+/// irrelevant earlier runs.
 pub fn[T : Spanning] Rle::range(
   self : Rle[T],
   start~ : Int,

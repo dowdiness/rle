@@ -1,5 +1,16 @@
 ///|
-/// Prefix sums for O(log n) position lookup
+/// **PrefixSums** — cumulative span and content arrays for O(log n) lookup.
+///
+/// Built from a `Runs[T]` in O(n) by `Runs::prefix_sums()`. Once built:
+///
+/// - **`spans[i]`** = total span of runs 0 through i (inclusive).
+///   Enables binary search in `find_fast` and O(1) total span via `spans.last()`.
+///
+/// - **`content[i]`** = total logical length of runs 0 through i.
+///   Enables O(1) total logical length via `content.last()`.
+///
+/// The library caches this inside `Rle` (as `prefix: PrefixSums?`). The cache
+/// is set to `None` on mutation and rebuilt lazily on the next query.
 pub(all) struct PrefixSums {
   spans : Array[Int] // cumulative span lengths
   content : Array[Int] // cumulative content lengths

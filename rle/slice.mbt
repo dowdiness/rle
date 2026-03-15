@@ -1,5 +1,13 @@
 ///|
-/// A slice view into a run, representing a sub-range [start, end)
+/// **Slice** — a lazy view into a run, representing the sub-range `[start, end)`.
+///
+/// `range()` operations return `Iter[Slice[T]]` instead of `Iter[T]`. Each
+/// `Slice` holds a reference to the original run plus the sub-range bounds,
+/// but does **not** materialize the sliced value until `to_inner()` is called.
+///
+/// This enables zero-copy iteration: if you only need to count matching runs,
+/// check a condition, or read metadata, you can inspect `Slice` fields without
+/// ever allocating new strings or sub-runs.
 pub struct Slice[T] {
   value : T
   start : Int
@@ -7,9 +15,11 @@ pub struct Slice[T] {
 } derive(Show, Eq)
 
 ///|
-/// Extracts the actual sliced value from this view.
+/// Materializes the sliced value by calling `T::slice(value, start, end)`.
 ///
-/// Returns the portion of `value` from `start` to `end`.
+/// This is the point where allocation happens (e.g., creating a substring).
+/// Returns `Err` if the slice bounds are invalid (e.g., inside a UTF-16
+/// surrogate pair for strings).
 pub fn[T : Sliceable] Slice::to_inner(self : Slice[T]) -> Result[T, RleError] {
   T::slice(self.value, start=self.start, end=self.end)
 }

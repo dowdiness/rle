@@ -9,7 +9,21 @@ pub fn[T] Runs::new() -> Runs[T] {
 }
 
 ///|
-/// Batch construction - single-pass stack merge, avoids repeated normalize_tail
+/// Batch construction — O(n) single-pass stack merge.
+///
+/// Uses a **stack-based cascade merge**: each input element is pushed onto the
+/// output array, then the top of the stack is repeatedly merged with the
+/// element below it as long as `can_merge` returns true. This "cascade"
+/// ensures the no-adjacent-mergeable invariant in one pass, without the
+/// overhead of calling `normalize_tail` for each element.
+///
+/// Zero-span elements are silently skipped (not an error, unlike `append`).
+///
+/// ## Amortized Cost
+///
+/// Each element is pushed and popped at most once, so total work is O(n)
+/// regardless of cascade depth. For types where `can_merge` is selective
+/// (e.g., same-author check), most iterations do zero cascading.
 pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
   arr : Array[T],
 ) -> Runs[T] {
@@ -167,8 +181,15 @@ pub fn[T : Spanning] Runs::find(self : Runs[T], pos : Int) -> RunPos? {
 }
 
 ///|
-/// Find position using prefix sums - O(log n) binary search
-/// Caller manages `PrefixSums` (use `Runs::prefix_sums()` and keep it in sync).
+/// Find position using prefix sums — O(log n) via upper-bound binary search.
+///
+/// `sums.spans` is a cumulative array where `spans[i]` = total span of runs
+/// 0 through i. The search finds the smallest index `i` where `spans[i] > pos`,
+/// which is the run containing position `pos`. The offset within that run is
+/// `pos - spans[i-1]` (or just `pos` for run 0).
+///
+/// Caller is responsible for keeping `sums` in sync with the runs array.
+/// Prefer `Rle::find()` which manages this automatically via lazy caching.
 pub fn[T] Runs::find_fast(
   self : Runs[T],
   sums : PrefixSums,
@@ -184,7 +205,7 @@ pub fn[T] Runs::find_fast(
   if pos >= total {
     return None
   }
-  // Binary search: find smallest i where spans[i] > pos
+  // Upper-bound binary search: find smallest i where spans[i] > pos
   let mut lo = 0
   let mut hi = self.0.length()
   while lo < hi {
@@ -219,7 +240,11 @@ pub fn[T : Spanning] Runs::prefix_sums(self : Runs[T]) -> PrefixSums {
 }
 
 ///|
-/// Iterate slices in range [start, end)
+/// Iterate slices in range [start, end).
+///
+/// Returns `Slice[T]` values — lazy views that defer materialization until
+/// `to_inner()` is called. This avoids allocating substrings or sub-runs
+/// when the caller only needs to inspect metadata or count matches.
 pub fn[T : Spanning] Runs::range(
   self : Runs[T],
   start~ : Int,
@@ -271,7 +296,16 @@ pub fn[T : Spanning] Runs::range_clamped(
 }
 
 ///|
-/// Split at position into two Runs
+/// Split at position into two Runs.
+///
+/// Requires `Sliceable` because the run straddling the split point must be
+/// sliced into two pieces. The resulting halves are built using `append`,
+/// which maintains the no-adjacent-mergeable invariant.
+///
+/// **Note**: round-tripping `split` then `concat` preserves content but may
+/// change the run count. This is expected — the split may create run
+/// boundaries that didn't exist before, and re-concatenation merges them
+/// differently.
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
   self : Runs[T],
   pos : Int,
@@ -337,8 +371,11 @@ pub fn[T] Runs::clear(self : Runs[T]) -> Unit {
 }
 
 ///|
-/// Concatenate two Runs - batch optimized, single boundary merge
-/// Delegates to from_array_batch when self is empty to avoid code duplication.
+/// Concatenate two Runs — uses the same stack-merge pattern as `from_array_batch`.
+///
+/// Copies `self`'s runs, then processes `other`'s runs one by one with the
+/// merge cascade. This means the boundary between the two inputs is properly
+/// normalized (adjacent mergeable runs across the boundary are combined).
 pub fn[T : Mergeable + Spanning] Runs::concat(
   self : Runs[T],
   other : Runs[T],

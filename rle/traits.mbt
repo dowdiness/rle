@@ -1,35 +1,64 @@
 ///|
-/// **Mergeable** - "Can two adjacent things become one?"
+/// **Mergeable** — determines when two adjacent runs compress into one.
 ///
-/// Think of it like train cars coupling together. Two runs can merge only if:
-/// - They are logically adjacent (e.g., consecutive characters from same author)
-/// - Merging preserves meaning (the merged result equals the concatenation)
+/// The RLE structure stores a sequence as an array of "runs." Whenever two
+/// adjacent runs satisfy `can_merge`, they are automatically combined via
+/// `merge`. This is the core compression mechanism.
 ///
-/// Example: "hel" + "lo" → "hello" (same author, consecutive positions)
-/// Counter-example: "hello" + "world" from different authors → cannot merge
+/// ## Contract
+///
+/// Implementors **must** ensure:
+///
+/// 1. **`merge` is associative**: `merge(merge(a, b), c) == merge(a, merge(b, c))`.
+///    The library's stack-based batch merge processes elements left-to-right and
+///    cascades merges backward. Without associativity, different insertion orders
+///    could produce different results.
+///
+/// 2. **`merge` preserves content**: the merged run must represent the same
+///    logical sequence as the two original runs placed side by side.
+///
+/// 3. **`can_merge` is consistent with `merge`**: if `can_merge(a, b)` returns
+///    `true`, then `merge(a, b)` must produce a valid element with
+///    `span(merge(a,b)) == span(a) + span(b)`.
+///
+/// ## Examples
+///
+/// - Strings: `can_merge` always returns `true`; `merge` concatenates.
+/// - Authored text: `can_merge` checks `a.author == b.author`.
+/// - Pixel runs: `can_merge` checks `a.color == b.color`; `merge` sums counts.
 pub(open) trait Mergeable {
   can_merge(Self, Self) -> Bool
   merge(Self, Self) -> Self
 }
 
 ///|
-/// **Sliceable** - "Can I cut a piece out of this?"
+/// **Sliceable** — extract a sub-range `[start, end)` from a run.
 ///
-/// Like slicing a loaf of bread. Given a run, extract a sub-range without
-/// needing to decompress the entire structure. Essential for RLE efficiency:
-/// instead of storing each character separately, we store runs and slice
-/// only when we need a specific portion.
+/// This trait is **optional**. Without it, you can still use `append`, `find`,
+/// `concat`, `extend`, `value_at`, and `range`. You need `Sliceable` to unlock
+/// positional editing operations: `split`, `insert`, `delete`, and `splice`.
+/// Note: `range()` returns `Slice[T]` values that work without `Sliceable`,
+/// but calling `Slice::to_inner()` to materialize them requires it.
 ///
-/// Uses half-open interval [start, end) — start is inclusive, end is exclusive.
-/// Example: slice("hello", start=1, end=4) → "ell"
+/// Uses half-open interval `[start, end)` — start inclusive, end exclusive.
+/// Indices are in the same units as `span()` (e.g., UTF-16 code units for
+/// strings, pixel count for pixel runs).
+///
+/// ## String Warning
+///
+/// For `String`, indices are **UTF-16 code units**, not Unicode codepoints.
+/// Emoji like "😀" occupy 2 code units (a surrogate pair). Slicing at an
+/// index inside a surrogate pair returns `Err(InvalidSlice(InvalidIndex))`.
+/// Always slice on valid character boundaries.
 pub(open) trait Sliceable {
   slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
 }
 
 ///|
-/// **HasLength** - "Plain size"
+/// **HasLength** — basic size of a value (number of runs for containers,
+/// character count for strings, etc.).
 ///
-/// Basic length for a value.
+/// Provides `is_empty()` with a default implementation (`length() == 0`).
 pub(open) trait HasLength {
   length(Self) -> Int
 
@@ -44,18 +73,36 @@ impl HasLength with is_empty(self) {
 }
 
 ///|
-/// **Spanning** - "Two notions of size"
+/// **Spanning** — two notions of size for position-aware data structures.
 ///
-/// Many data structures need two different notions of "length":
+/// ## Default Chain
 ///
-/// - `span`: The total size in the position/index space.
-///   Always positive; includes all elements regardless of state.
+/// The three size methods form a defaulting chain:
 ///
-/// - `logical_length`: The size of the useful/visible payload.
-///   May be less than `span` if some elements are hidden or deleted.
-///   Defaults to `span()` — override when logical size differs.
+/// ```text
+/// HasLength::length  ←──  Spanning::span  ←──  Spanning::logical_length
+///        (base)          (defaults to length)    (defaults to span)
+/// ```
 ///
-/// Note: `span` defaults to `HasLength::length` unless overridden.
+/// If you only implement `HasLength::length`, all three return the same value.
+/// Override `span()` to diverge from `length()`, or override `logical_length()`
+/// to diverge from `span()`.
+///
+/// ## When to Override
+///
+/// - **Simple types** (strings, pixel runs): implement only `HasLength::length`.
+///   All three methods return the same value.
+///
+/// - **CRDT tombstones / gap buffers**: override `logical_length` to return
+///   visible content size, while `span` counts all elements including deleted
+///   or hidden ones. The library uses `span` for position lookup and
+///   `logical_length` for content metrics.
+///
+/// ## Units
+///
+/// `span` defines the coordinate space for `find`, `split`, `range`, etc.
+/// For strings, this is UTF-16 code units. For pixel runs, pixel count.
+/// Choose units that match your indexing needs.
 pub(open) trait Spanning: HasLength {
   span(Self) -> Int = _
   logical_length(Self) -> Int = _
