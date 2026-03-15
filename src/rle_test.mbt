@@ -926,3 +926,46 @@ test "Rle::each_with_position multiple runs (TestRange)" {
   inspect(positions[0], content="(0, 3)")
   inspect(positions[1], content="(3, 6)")
 }
+
+///|
+test "Rle::iter_units empty" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([])
+  let units = rle.iter_units().collect()
+  inspect(units.length(), content="0")
+}
+
+///|
+test "Rle::iter_units consecutive" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 3, 4]")
+}
+
+///|
+test "Rle::iter_units with gaps" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 5, 6, 7]")
+}
+
+///|
+test "Rle::iter_units single element" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([42])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[42]")
+}
+
+///|
+test "Rle::iter_units with duplicates in input" {
+  let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 5, 5, 6])
+  let units = rle.iter_units().collect()
+  inspect(units, content="[1, 2, 5, 6]")
+}
+
+///|
+test "Rle::iter_units index-free (DenseTestRun)" {
+  let rle : @rle.Rle[DenseTestRun] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
+  // DenseTestRun uses global_start + offset path
+  let units = rle.iter_units().collect()
+  inspect(units, content="[0, 1, 2, 3, 4]")
+}

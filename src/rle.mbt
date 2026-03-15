@@ -83,6 +83,36 @@ pub fn[T : Spanning] Rle::each_with_position(
 }
 
 ///|
+/// Expand each run into individual domain integer values.
+///
+/// Uses prefix sums to derive `global_start` for each run, then calls
+/// `Addressable::address` for each offset `0..span-1` within the run.
+///
+/// **Complexity:** O(total_span) — yields every unit position.
+pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
+  let prefix = self.ensure_prefix()
+  let items = self.runs.0
+  let total_runs = items.length()
+  let mut run_idx = 0
+  let mut offset = 0
+  Iter::new(fn() {
+    while run_idx < total_runs {
+      let run = items[run_idx]
+      let run_span = T::span(run)
+      if offset < run_span {
+        let global_start = prefix.span_before(run_idx)
+        let value = T::address(run, global_start, offset)
+        offset = offset + 1
+        return Some(value)
+      }
+      run_idx = run_idx + 1
+      offset = 0
+    }
+    None
+  })
+}
+
+///|
 /// Extract the underlying Runs
 pub fn[T] Rle::to_runs(self : Rle[T]) -> Runs[T] {
   self.runs
