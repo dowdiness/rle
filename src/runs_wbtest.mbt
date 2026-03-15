@@ -113,3 +113,32 @@ test "Rle extend invalidates cache" {
   a.extend(b)
   inspect(a.prefix is None, content="true")
 }
+
+///|
+test "Rle extend with all-zero-span does not bump version" {
+  let a = Rle::from_string("hello")
+  let _ = a.span() // build cache
+  let old_version = a.version
+  // Construct runs containing only zero-span items (empty strings).
+  // Runs::extend skips zero-span items, so no mutation should occur.
+  let zero_span_runs : Runs[String] = Runs(["", "", ""])
+  let b : Rle[String] = Rle::from_runs(zero_span_runs)
+  a.extend(b)
+  // Version should NOT bump — no actual mutation happened
+  inspect(a.version == old_version, content="true")
+  // Cache should NOT be invalidated
+  inspect(a.prefix is Some(_), content="true")
+  // Content unchanged
+  inspect(a.runs.0[0], content="hello")
+}
+
+///|
+test "Rle extend with real items does bump version" {
+  let a = Rle::from_string("hello")
+  let _ = a.span()
+  let old_version = a.version
+  let b = Rle::from_string(" world")
+  a.extend(b)
+  inspect(a.version > old_version, content="true")
+  inspect(a.prefix is None, content="true")
+}

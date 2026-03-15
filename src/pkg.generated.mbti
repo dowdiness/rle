@@ -33,10 +33,6 @@ pub impl Eq for SliceError
 pub impl Show for SliceError
 
 // Types and methods
-type BenchRun
-pub impl Eq for BenchRun
-pub impl Show for BenchRun
-
 pub struct ErrorMessage {
   // private fields
 }

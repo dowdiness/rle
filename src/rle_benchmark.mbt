@@ -1,32 +1,22 @@
-// Benchmarks for Runs::range implementations
-// Run with: moon bench --package rle --release
+// Benchmarks for Runs operations
+// Run with: moon bench --release
 
 ///|
-struct BenchRun {
-  len : Int
-} derive(Show, Eq)
-
-///|
-impl HasLength for BenchRun with length(self : BenchRun) -> Int {
-  self.len
-}
-
-///|
-impl Spanning for BenchRun with span(self : BenchRun) -> Int {
-  self.len
-}
-
-///|
-fn make_runs(count : Int, run_len : Int) -> Runs[BenchRun] {
-  let arr : Array[BenchRun] = []
+fn make_fixed_runs(count : Int, segment_size : Int) -> Runs[String] {
+  let arr : Array[String] = []
   for _i = 0; _i < count; _i = _i + 1 {
-    arr.push({ len: run_len })
+    let sb = StringBuilder::new()
+    for _j = 0; _j < segment_size; _j = _j + 1 {
+      sb.write_char('a')
+    }
+    arr.push(sb.to_string())
   }
+  // Bypass from_array to avoid merging — each run stays separate
   Runs(arr)
 }
 
 ///|
-fn count_slices(it : Iter[Slice[BenchRun]]) -> Int {
+fn count_slices(it : Iter[Slice[String]]) -> Int {
   let mut count = 0
   for _ in it {
     count = count + 1
@@ -36,9 +26,8 @@ fn count_slices(it : Iter[Slice[BenchRun]]) -> Int {
 
 ///|
 /// Benchmark: range with small span near start
-/// Uses early break for short ranges.
 test "runs - range iter (small)" (b : @bench.T) {
-  let runs = make_runs(10000, 4)
+  let runs = make_fixed_runs(10000, 4)
   let start = 0
   let end = 400
   b.bench(fn() {
@@ -53,9 +42,8 @@ test "runs - range iter (small)" (b : @bench.T) {
 
 ///|
 /// Benchmark: range with span near middle
-/// Forces scanning about half of the runs.
 test "runs - range iter (middle)" (b : @bench.T) {
-  let runs = make_runs(10000, 4)
+  let runs = make_fixed_runs(10000, 4)
   let total = 10000 * 4
   let start = total / 2
   let end = start + 400
