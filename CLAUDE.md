@@ -1,6 +1,18 @@
 # CLAUDE.md
 
-RLE library in MoonBit — compressed sequences with O(log n) lookup via lazy prefix sums. For detailed type/file reference see [ARCHITECTURE.md](ARCHITECTURE.md).
+## Project Overview
+
+RLE library in MoonBit — compressed sequences with O(log n) lookup via lazy prefix sums. For detailed type/file reference see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## MoonBit Language Notes
+
+- `pub` vs `pub(all)` visibility modifiers have different semantics — check current docs before using
+- `._` syntax is deprecated, use `.0` for tuple access
+- `try?` does not catch `abort` — use explicit error handling
+- `?` operator is not always supported — use explicit match/error handling when it fails
+- `ref` is a reserved keyword — do not use as variable/field names
+- Blackbox tests cannot construct internal structs — use whitebox tests or expose constructors
+- For cross-target builds, use per-file conditional compilation rather than `supported-targets` in moon.pkg.json
 
 ## Build Commands
 
@@ -36,7 +48,7 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 **Forgetting bump_version.** Every `invalidate()` call must pair with `bump_version()`. Copy the pattern from `append()`.
 
-**String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. Wrap string view slicing in try/catch converting `@builtin.InvalidIndex` → `RleError::InvalidSlice`. Test with "😀" (2 units) and "A😀B" (4 units).
+**String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. `slice_string_view` validates bounds and surrogate pair boundaries, returning `SliceError::InvalidIndex` for mid-pair cuts. Test with "😀" (2 units) and "A😀B" (4 units).
 
 **Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend silently skip.
 
@@ -51,3 +63,50 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 **Safety.** No panics on user input — always `Result`. Bounds-check new direct array access patterns. Stale cursors return `None`, never wrong data.
 
 **Cost.** Single package, minimal deps (`moonbitlang/quickcheck`, core bench). Keep property test generators bounded and test suite fast.
+
+## Package Map
+
+| Package | Purpose |
+|---------|---------|
+| `rle/` | Core library — traits, runs, prefix sums, rle wrapper, cursor, slice, errors |
+| `example/` | Basic string usage demo |
+| `example/string/` | String-specific operations demo |
+| `example/pixel/` | Custom `PixelRun` type demo (no Sliceable) |
+| `example/authored/` | Custom `AuthoredRun` type demo (with Sliceable) |
+
+## Documentation
+
+- **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — type descriptions, algorithms, design rationale
+- **Plans:** `docs/plans/` — implementation design documents
+
+## MoonBit Conventions
+
+- **Block-style:** Code organized in `///|` separated blocks
+- **Testing:** Use `inspect` for snapshots, `@qc` for properties
+- **Files:** `*_test.mbt` (blackbox), `*_wbtest.mbt` (whitebox), `*_benchmark.mbt`
+- **Format:** Always `moon info && moon fmt` before committing
+- **Trait impl:** `pub impl Trait for Type with method(self) { ... }` — one method per impl block
+- **Arrow functions:** `() => expr`, `() => { stmts }`. Empty body: `() => ()` not `() => {}`
+
+## Code Review Standards
+
+- Never dismiss a review request — always do a thorough line-by-line review even if changes seem minor
+- Check for: integer overflow, zero/negative inputs, boundary validation, generation wrap-around
+- Do not suggest deleting public API types (Id structs, etc.) as 'unused' — they may be needed by downstream consumers
+- Verify method names match actual API before writing tests (e.g., check if it's `insert` vs `add_local_op`)
+
+## Development Workflow
+
+1. Make edits
+2. `moon check` — Lint
+3. `moon test` — Run tests
+4. `moon test --update` — Update snapshots (if behavior changed)
+5. `moon info` — Update `.mbti` interfaces
+6. Check `git diff *.mbti` — Verify API changes
+7. `moon fmt` — Format
+
+## Git Workflow
+
+- Always check if git is initialized before running git commands
+- After rebase operations, verify files are in the correct directories
+- When asked to 'commit remaining files', interpret generously even if phrasing is unclear
