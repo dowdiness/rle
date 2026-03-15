@@ -31,14 +31,16 @@ impl @rle.Spanning for AuthoredRun with span(self : AuthoredRun) -> Int {
 }
 
 ///|
+/// Sliceable via String's built-in Sliceable impl — validates bounds and
+/// surrogate pair boundaries automatically.
 impl @rle.Sliceable for AuthoredRun with slice(
   self : AuthoredRun,
   start~ : Int,
   end~ : Int,
 ) -> Result[AuthoredRun, @rle.RleError] {
-  match @rle.slice_string_view(self.text, start~, end~) {
+  match @rle.Sliceable::slice(self.text, start~, end~) {
     Ok(sliced) => Ok({ author: self.author, text: sliced })
-    Err(err) => Err(@rle.RleError::InvalidSlice(reason=err))
+    Err(e) => Err(e)
   }
 }
 

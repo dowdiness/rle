@@ -190,16 +190,17 @@ impl @rle.Spanning for AuthoredRun with span(self) {
   self.text.length()
 }
 
-// Sliceable: needed for split, insert, delete, splice
+// Sliceable: needed for split, insert, delete, splice.
+// Delegates to String's Sliceable impl for bounds and surrogate validation.
 impl @rle.Sliceable for AuthoredRun with slice(self, start~, end~) {
-  match @rle.slice_string_view(self.text, start~, end~) {
+  match @rle.Sliceable::slice(self.text, start~, end~) {
     Ok(sliced) => Ok({ author: self.author, text: sliced })
-    Err(err) => Err(@rle.RleError::InvalidSlice(reason=err))
+    Err(e) => Err(e)
   }
 }
 ```
 
-The `slice_string_view` helper is provided by the library for types that wrap strings.
+For types wrapping strings, delegate to `String`'s `Sliceable` impl which handles bounds checking and UTF-16 surrogate pair validation. For lower-level control, `slice_string_view` is also available and returns `SliceError` directly.
 
 ### Implementing Mergeable: Contract
 

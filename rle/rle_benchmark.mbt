@@ -2,17 +2,17 @@
 // Run with: moon bench --package rle --release
 
 ///|
-pub(all) struct BenchRun {
+struct BenchRun {
   len : Int
 } derive(Show, Eq)
 
 ///|
-pub impl HasLength for BenchRun with length(self : BenchRun) -> Int {
+impl HasLength for BenchRun with length(self : BenchRun) -> Int {
   self.len
 }
 
 ///|
-pub impl Spanning for BenchRun with span(self : BenchRun) -> Int {
+impl Spanning for BenchRun with span(self : BenchRun) -> Int {
   self.len
 }
 

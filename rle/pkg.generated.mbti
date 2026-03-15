@@ -33,11 +33,7 @@ pub impl Eq for SliceError
 pub impl Show for SliceError
 
 // Types and methods
-pub(all) struct BenchRun {
-  len : Int
-}
-pub impl HasLength for BenchRun
-pub impl Spanning for BenchRun
+type BenchRun
 pub impl Eq for BenchRun
 pub impl Show for BenchRun
 
