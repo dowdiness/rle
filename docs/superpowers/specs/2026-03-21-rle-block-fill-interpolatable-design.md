@@ -68,6 +68,7 @@ pub(open) trait Interpolatable : Spanning {
 // Constant segment: same value everywhere
 struct ConstantSegment { value : Double, length : Int }
 
+impl HasLength for ConstantSegment with length(self) { self.length }
 impl Spanning for ConstantSegment with span(self) { self.length }
 impl Interpolatable for ConstantSegment with interpolate(self, _offset) {
   self.value
@@ -76,6 +77,7 @@ impl Interpolatable for ConstantSegment with interpolate(self, _offset) {
 // Linear ramp: interpolates between start and end
 struct RampSegment { start : Double, end_ : Double, length : Int }
 
+impl HasLength for RampSegment with length(self) { 1 }  // one run
 impl Spanning for RampSegment with span(self) { self.length }
 impl Interpolatable for RampSegment with interpolate(self, offset) {
   if self.span() <= 1 {
@@ -170,8 +172,13 @@ pub fn[T : Interpolatable] Rle::fill_buffer_interpolated(
 ) -> Result[Int, RleError]
 ```
 
-**Algorithm:** Same traversal as `fill_buffer`, but instead of writing the run
-object, writes `run.interpolate(offset_in_run)` into each buffer slot.
+**Algorithm:** Same traversal logic as `fill_buffer`, but instead of writing the
+run object, writes `run.interpolate(offset_in_run)` into each buffer slot.
+This deliberately duplicates the traversal rather than composing `fill_buffer`
++ manual interpolation, because `fill_buffer` writes run objects without offset
+information, making post-hoc interpolation impossible without reconstructing
+positions. The implementation should extract a shared private traversal helper
+to keep both methods in sync.
 
 **Complexity:** O(log n + k).
 
@@ -196,7 +203,7 @@ match timeline.fill_buffer_interpolated(cursor_position, sample_buffer) {
 
 ### 3.4 Edge Cases
 
-- `start < 0` → `Err(PositionOutOfBounds)`
+- `start < 0` → `Err(PositionOutOfBounds(position=start, length=total_span))`
 - `start >= total_span` → `Ok(0)`
 - `buffer.length() == 0` → `Ok(0)`
 - `start + buffer.length() > total_span` → fill available positions, return
@@ -213,21 +220,24 @@ match timeline.fill_buffer_interpolated(cursor_position, sample_buffer) {
 ///|
 /// Fill `buffer` with run objects starting from the cursor's current position.
 /// Advances the cursor by the number of positions filled.
-/// Returns 0 if stale, at end, or empty buffer.
+/// Returns `None` if the cursor is stale (Rle was mutated since cursor
+/// creation). Returns `Some(0)` if at end or buffer is empty.
+/// Returns `Some(count)` with the number of positions filled.
 ///
-/// To fill from an arbitrary position, call `seek(pos)` first. If `seek`
-/// returns false (out of bounds), the cursor is at the end and `fill_buffer`
-/// will return 0.
+/// To fill from an arbitrary position, call `seek(pos)` first. `seek`
+/// returns false for out-of-bounds positions: negative positions reset
+/// the cursor to position 0; positions past the end leave the cursor at
+/// the end.
 pub fn[T : Spanning] RleCursor::fill_buffer(
   self : RleCursor[T],
   buffer : Array[T],
-) -> Int
+) -> MayStale[Int]
 ```
 
 ### 4.2 Algorithm
 
-1. Check staleness: if `self.version != self.rle.version`, return 0.
-2. If `buffer.length() == 0`, return 0.
+1. Check staleness: if `self.version != self.rle.version`, return `None`.
+2. If `buffer.length() == 0`, return `Some(0)`.
 3. Start from `self.run_index` and `self.offset_in_run` (already positioned
    from previous operations or `seek`).
 4. Linear scan forward from the current position:
@@ -244,11 +254,11 @@ pub fn[T : Spanning] RleCursor::fill_buffer(
 ///|
 /// Fill `buffer` with interpolated Double values starting from the cursor's
 /// current position. Advances the cursor by the number of positions filled.
-/// Returns 0 if stale, at end, or empty buffer.
+/// Returns `None` if stale, `Some(0)` if at end or empty buffer.
 pub fn[T : Interpolatable] RleCursor::fill_buffer_interpolated(
   self : RleCursor[T],
   buffer : Array[Double],
-) -> Int
+) -> MayStale[Int]
 ```
 
 Same traversal as `RleCursor::fill_buffer` but writes
@@ -273,8 +283,10 @@ visited at most once across consecutive calls.
 
 ### 4.5 Staleness
 
-Returns 0 and does not advance. Matches the existing cursor contract: stale
-cursors refuse to operate rather than returning potentially wrong data.
+Returns `None` and does not advance. Matches the existing cursor contract
+(`MayStale[T]` / `T?`): stale cursors refuse to operate rather than returning
+potentially wrong data. `Some(0)` is a legitimate result meaning "at end" —
+distinct from `None` meaning "stale."
 
 ### 4.6 Placement
 
@@ -293,6 +305,11 @@ File: `src/rle_cursor.mbt`, alongside `advance`, `next`, `iter_forward`.
   by zero)
 
 ### 5.2 Rle::fill_buffer and Runs::fill_buffer
+
+Tests must use a non-always-merging fixture type (like `PixelRun` or
+`ConstantSegment` with different values) to ensure adjacent runs remain
+distinct. The built-in `String` type always merges, which would collapse
+multi-run fixtures into a single run.
 
 - Full fill: buffer fits within one run → all slots get the same run
 - Cross-run fill: buffer spans multiple runs → correct run at each position
@@ -324,8 +341,12 @@ File: `src/rle_cursor.mbt`, alongside `advance`, `next`, `iter_forward`.
 - Partial end: cursor near end, fill_buffer returns partial count
 - Matches Rle::fill_buffer: cursor from position P fills the same as
   Rle::fill_buffer(P, buffer)
-- After failed seek: `seek(-1)` → false, then `fill_buffer` → returns values
-  from position 0 (seek to invalid position leaves cursor at start)
+- After negative seek: `seek(-1)` → false, cursor at position 0, then
+  `fill_buffer` returns `Some(count)` starting from position 0
+- After past-end seek: `seek(total_span + 1)` → false, cursor at end, then
+  `fill_buffer` returns `Some(0)`
+- Stale cursor leaves state untouched: mutate Rle, call `fill_buffer` →
+  returns `None`, cursor position unchanged from before the call
 
 ### 5.5 QuickCheck Properties
 
@@ -357,6 +378,8 @@ File: `src/rle_cursor.mbt`, alongside `advance`, `next`, `iter_forward`.
 | `src/rle_test.mbt` | Tests for `Rle::fill_buffer`, `fill_buffer_interpolated`, `Interpolatable` |
 | `src/rle_cursor_test.mbt` | Tests for cursor fill methods (new file if needed) |
 | `src/runs_properties_test.mbt` | QuickCheck property tests |
+| `src/pkg.generated.mbti` | Updated by `moon info` to reflect new public API |
+| `docs/ARCHITECTURE.md` | Add `Interpolatable` to the trait documentation (seven traits, not six) |
 
-No existing files are modified beyond appending new functions and tests.
-No existing APIs change.
+No existing APIs change semantics. New public functions and one new trait are
+added to the public surface.
