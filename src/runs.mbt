@@ -38,7 +38,7 @@ pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
     }
     // Stack-merge: fold into tail and cascade as needed
     let mut cur = item
-    while not(out.is_empty()) {
+    while !out.is_empty() {
       let last = out[out.length() - 1]
       if T::can_merge(last, cur) {
         let _ = out.pop()
@@ -462,7 +462,7 @@ pub fn[T : Mergeable + Spanning] Runs::concat(
       continue
     }
     let mut cur = item
-    while not(out.is_empty()) {
+    while !out.is_empty() {
       let last = out[out.length() - 1]
       if T::can_merge(last, cur) {
         let _ = out.pop()
@@ -490,7 +490,7 @@ pub fn[T : Mergeable + Spanning] Runs::extend(
       continue
     }
     let mut cur = item
-    while not(self.0.is_empty()) {
+    while !self.0.is_empty() {
       let last = self.0[self.0.length() - 1]
       if T::can_merge(last, cur) {
         let _ = self.0.pop()

@@ -6,9 +6,7 @@ package "dowdiness/rle/example/authored"
 // Errors
 
 // Types and methods
-type AuthoredRun
-pub impl Eq for AuthoredRun
-pub impl Show for AuthoredRun
+type AuthoredRun derive(Eq, Show)
 
 // Type aliases
 
