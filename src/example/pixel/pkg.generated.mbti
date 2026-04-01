@@ -6,9 +6,7 @@ package "dowdiness/rle/example/pixel"
 // Errors
 
 // Types and methods
-type PixelRun
-pub impl Eq for PixelRun
-pub impl Show for PixelRun
+type PixelRun derive(Eq, Show)
 
 // Type aliases
 

@@ -24,7 +24,7 @@ pub impl @quickcheck.Arbitrary for Runs[String] with arbitrary(
       sb.write_char(chars[char_idx])
     }
     let s = sb.to_string()
-    if not(s.is_empty()) {
+    if !s.is_empty() {
       let _ = runs.append(s)
     }
   }
@@ -91,7 +91,7 @@ pub impl @qc.Shrink for Runs[String] with shrink(runs) {
           let _ = shortened.append(items[j])
         }
       }
-      if not(shortened.is_empty()) {
+      if !shortened.is_empty() {
         results.push(shortened)
       }
     }
