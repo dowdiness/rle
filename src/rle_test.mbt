@@ -782,7 +782,7 @@ test "Spanning::logical_length - Runs matches span for String" {
 priv struct TestRange {
   start : Int
   count : Int
-} derive(Debug, Eq)
+}
 
 ///|
 impl @rle.FromRange for TestRange with from_range(start, count) {
@@ -818,7 +818,7 @@ impl @rle.Mergeable for TestRange with merge(a, b) {
 /// Test helper: index-free dense run type. Tests the global_start + offset path.
 priv struct DenseTestRun {
   count : Int
-} derive(Debug, Eq)
+}
 
 ///|
 impl @rle.FromRange for DenseTestRun with from_range(_start, count) {
