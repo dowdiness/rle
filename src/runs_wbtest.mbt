@@ -142,7 +142,7 @@ test "Rle extend with all-zero-span does not bump version" {
 priv struct WbRange {
   start : Int
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 impl FromRange for WbRange with from_range(start, count) {

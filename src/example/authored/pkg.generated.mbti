@@ -1,12 +1,16 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "dowdiness/rle/example/authored"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
-type AuthoredRun derive(Eq, Show)
+type AuthoredRun derive(Eq, @debug.Debug)
 
 // Type aliases
 

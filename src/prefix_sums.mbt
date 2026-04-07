@@ -16,7 +16,12 @@ pub(all) struct PrefixSums {
   content : Array[Int] // cumulative content lengths
 
   fn new() -> PrefixSums
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for PrefixSums with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Create an empty prefix sum table.

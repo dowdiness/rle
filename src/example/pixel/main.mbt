@@ -6,7 +6,12 @@
 struct PixelRun {
   color : Int
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+impl Show for PixelRun with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 impl @rle.Mergeable for PixelRun with can_merge(a : PixelRun, b : PixelRun) -> Bool {

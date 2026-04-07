@@ -16,7 +16,12 @@ test {
 
   // Length and lookup
   inspect(rle.span(), content="11")
-  inspect(rle.find(6), content="Some({run: 0, offset: 6})")
+  inspect(
+    rle.find(6),
+    content=(
+      #|Some({ run: 0, offset: 6 })
+    ),
+  )
 }
 ```
 
@@ -176,8 +181,18 @@ test {
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.find(0), content="Some({run: 0, offset: 0})")
-  inspect(rle.find(4), content="Some({run: 0, offset: 4})")
+  inspect(
+    rle.find(0),
+    content=(
+      #|Some({ run: 0, offset: 0 })
+    ),
+  )
+  inspect(
+    rle.find(4),
+    content=(
+      #|Some({ run: 0, offset: 4 })
+    ),
+  )
   inspect(rle.find(5), content="None")
   inspect(rle.find(-1), content="None")
 }
@@ -348,7 +363,12 @@ BMP characters (CJK) work as expected:
 test {
   let rle = @rle.Rle::from_string("こんにちは")
   inspect(rle.span(), content="5")
-  inspect(rle.find(2), content="Some({run: 0, offset: 2})")
+  inspect(
+    rle.find(2),
+    content=(
+      #|Some({ run: 0, offset: 2 })
+    ),
+  )
   match rle.split(1) {
     Ok((left, right)) => {
       inspect(left.to_string(), content="こ")

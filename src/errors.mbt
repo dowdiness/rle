@@ -5,7 +5,12 @@
 pub(all) suberror InternalError {
   EmptyElement // Attempted to add element with span == 0
   InvalidState(detail~ : String)
-} derive(Show)
+} derive(Debug)
+
+///|
+pub impl Show for InternalError with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Slice errors when extracting sub-ranges from a run.
@@ -17,7 +22,12 @@ pub(all) suberror SliceError {
   IndexOutOfBounds
   /// Start/end split a UTF-16 surrogate pair.
   InvalidIndex
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for SliceError with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Why a range is invalid
@@ -26,7 +36,12 @@ pub enum RangeIssue {
   NegativeEnd
   StartAfterEnd
   ExceedsLength
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl Show for RangeIssue with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// User-facing errors with context for friendly messages
@@ -36,7 +51,12 @@ pub(all) suberror RleError {
   /// A slice failed to produce a valid value (e.g., invalid UTF-16 boundary).
   InvalidSlice(reason~ : SliceError)
   Internal(InternalError)
-} derive(Show)
+} derive(Debug)
+
+///|
+pub impl Show for RleError with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Rust style wrapper struct for user-friendly error display

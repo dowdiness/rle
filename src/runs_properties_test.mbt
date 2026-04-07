@@ -374,7 +374,7 @@ test "property: splice equals delete then insert" {
 priv struct PropRange {
   start : Int
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 impl @rle.FromRange for PropRange with from_range(start, count) {
