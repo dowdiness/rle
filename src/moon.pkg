@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/builtin",
   "moonbitlang/core/bench",
+  "moonbitlang/core/debug",
   "moonbitlang/core/quickcheck",
   "moonbitlang/quickcheck" @qc,
 }

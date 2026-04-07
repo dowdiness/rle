@@ -31,7 +31,12 @@ pub struct Rle[T] {
   mut version : Int // Monotonically increasing mutation counter
 
   fn[T] new() -> Rle[T]
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl[T : Debug] Show for Rle[T] with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Create an empty Rle with no runs

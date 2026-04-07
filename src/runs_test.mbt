@@ -52,14 +52,29 @@ test "Runs::logical_length returns total logical length" {
 ///|
 test "Runs::find finds correct position" {
   let runs = @rle.Runs::from_string("abcdef")
-  inspect(runs.find(3), content="Some({run: 0, offset: 3})")
+  inspect(
+    runs.find(3),
+    content=(
+      #|Some({ run: 0, offset: 3 })
+    ),
+  )
 }
 
 ///|
 test "Runs::find at boundaries" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.find(0), content="Some({run: 0, offset: 0})")
-  inspect(runs.find(4), content="Some({run: 0, offset: 4})")
+  inspect(
+    runs.find(0),
+    content=(
+      #|Some({ run: 0, offset: 0 })
+    ),
+  )
+  inspect(
+    runs.find(4),
+    content=(
+      #|Some({ run: 0, offset: 4 })
+    ),
+  )
   inspect(runs.find(5), content="None")
   inspect(runs.find(-1), content="None")
 }
@@ -221,7 +236,12 @@ test "Runs::from_array merges and skips empty" {
 test "Runs unicode handling" {
   let runs = @rle.Runs::from_string("こんにちは")
   inspect(runs.span(), content="5")
-  inspect(runs.find(2), content="Some({run: 0, offset: 2})")
+  inspect(
+    runs.find(2),
+    content=(
+      #|Some({ run: 0, offset: 2 })
+    ),
+  )
 }
 
 ///|

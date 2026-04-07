@@ -4,7 +4,7 @@
 // BenchRun: a non-mergeable run type for benchmarks.
 // can_merge returns false so runs stay separate after construction,
 // giving realistic multi-run data for range/concat/extend benchmarks.
-// No derive(Show, Eq) — avoids leaking into the public interface.
+// No derive(Debug, Eq) — avoids leaking into the public interface.
 
 ///|
 priv struct BenchRun {

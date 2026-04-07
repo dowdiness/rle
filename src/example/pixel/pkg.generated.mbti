@@ -1,12 +1,16 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "dowdiness/rle/example/pixel"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
-type PixelRun derive(Eq, Show)
+type PixelRun derive(Eq, @debug.Debug)
 
 // Type aliases
 

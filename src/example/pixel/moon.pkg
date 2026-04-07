@@ -1,5 +1,6 @@
 import {
   "dowdiness/rle",
+  "moonbitlang/core/debug",
 }
 
 options(

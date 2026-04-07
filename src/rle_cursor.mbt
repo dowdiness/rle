@@ -37,7 +37,12 @@ pub struct RleCursor[T] {
   mut run_index : Int
   mut offset_in_run : Int
   mut global_offset : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl[T : Debug] Show for RleCursor[T] with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Create cursor for Rle (starts at position 0)

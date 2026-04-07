@@ -1,6 +1,11 @@
 ///|
 /// Array of mergeable runs - core RLE data structure
-pub struct Runs[T](Array[T]) derive(Show, Eq)
+pub struct Runs[T](Array[T]) derive(Debug, Eq)
+
+///|
+pub impl[T : Debug] Show for Runs[T] with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Create an empty Runs with no elements

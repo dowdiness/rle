@@ -12,7 +12,12 @@ pub struct Slice[T] {
   value : T
   start : Int
   end : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+pub impl[T : Debug] Show for Slice[T] with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 /// Materializes the sliced value by calling `T::slice(value, start, end)`.

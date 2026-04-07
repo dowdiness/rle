@@ -65,14 +65,29 @@ test "Rle::append invalidates cache" {
 ///|
 test "Rle::find uses binary search" {
   let rle = @rle.Rle::from_string("abcdef")
-  inspect(rle.find(3), content="Some({run: 0, offset: 3})")
+  inspect(
+    rle.find(3),
+    content=(
+      #|Some({ run: 0, offset: 3 })
+    ),
+  )
 }
 
 ///|
 test "Rle::find at boundaries" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.find(0), content="Some({run: 0, offset: 0})")
-  inspect(rle.find(4), content="Some({run: 0, offset: 4})")
+  inspect(
+    rle.find(0),
+    content=(
+      #|Some({ run: 0, offset: 0 })
+    ),
+  )
+  inspect(
+    rle.find(4),
+    content=(
+      #|Some({ run: 0, offset: 4 })
+    ),
+  )
   inspect(rle.find(5), content="None")
   inspect(rle.find(-1), content="None")
 }
@@ -222,7 +237,12 @@ test "Rle::from_array merges and skips empty" {
 test "Rle unicode handling" {
   let rle = @rle.Rle::from_string("こんにちは")
   inspect(rle.span(), content="5")
-  inspect(rle.find(2), content="Some({run: 0, offset: 2})")
+  inspect(
+    rle.find(2),
+    content=(
+      #|Some({ run: 0, offset: 2 })
+    ),
+  )
 }
 
 ///|
@@ -762,7 +782,7 @@ test "Spanning::logical_length - Runs matches span for String" {
 priv struct TestRange {
   start : Int
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 impl @rle.FromRange for TestRange with from_range(start, count) {
@@ -798,7 +818,7 @@ impl @rle.Mergeable for TestRange with merge(a, b) {
 /// Test helper: index-free dense run type. Tests the global_start + offset path.
 priv struct DenseTestRun {
   count : Int
-} derive(Show, Eq)
+} derive(Debug, Eq)
 
 ///|
 impl @rle.FromRange for DenseTestRun with from_range(_start, count) {

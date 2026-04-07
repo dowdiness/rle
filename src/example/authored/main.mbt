@@ -5,7 +5,12 @@
 struct AuthoredRun {
   author : String
   text : String
-} derive(Show, Eq)
+} derive(Debug, Eq)
+
+///|
+impl Show for AuthoredRun with output(self, logger) {
+  logger.write_string(@debug.to_string(self))
+}
 
 ///|
 impl @rle.Mergeable for AuthoredRun with can_merge(
