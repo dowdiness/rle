@@ -478,7 +478,7 @@ fn prop_cursor_seek_matches_find(raw : Array[Int]) -> Bool {
   let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(values)
   let total = rle.span()
   let cursor = rle.cursor()
-  if !cursor.seek(-1) && cursor.position() != Some(0) {
+  if cursor.seek(-1) || cursor.position() != Some(0) {
     return false
   }
   for pos = 0; pos < total; pos = pos + 1 {
