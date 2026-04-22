@@ -37,24 +37,26 @@ pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
     if T::span(item) <= 0 {
       continue
     }
-    if out.is_empty() {
-      out.push(item)
-      continue
-    }
-    // Stack-merge: fold into tail and cascade as needed
-    let mut cur = item
-    while !out.is_empty() {
-      let last = out[out.length() - 1]
-      if T::can_merge(last, cur) {
-        let _ = out.pop()
-        cur = T::merge(last, cur)
-      } else {
-        break
-      }
-    }
-    out.push(cur)
+    push_normalized(out, item)
   }
   Runs(out)
+}
+
+///|
+/// Push one already-valid run into `out`, merging leftward until the
+/// no-adjacent-mergeable invariant is restored.
+fn[T : Mergeable] push_normalized(out : Array[T], item : T) -> Unit {
+  let mut cur = item
+  while !out.is_empty() {
+    let last = out[out.length() - 1]
+    if T::can_merge(last, cur) {
+      let _ = out.pop()
+      cur = T::merge(last, cur)
+    } else {
+      break
+    }
+  }
+  out.push(cur)
 }
 
 ///|
@@ -330,8 +332,18 @@ pub fn[T : Spanning] Runs::range(
     Ok(_) => ()
     Err(e) => return Err(e)
   }
+  Ok(self.range_unchecked(start~, end~))
+}
+
+///|
+/// Build range slices after the caller has already validated or clamped bounds.
+fn[T : Spanning] Runs::range_unchecked(
+  self : Runs[T],
+  start~ : Int,
+  end~ : Int,
+) -> Iter[Slice[T]] {
   if start == end {
-    return Ok(Iter::empty())
+    return Iter::empty()
   }
   let result : Array[Slice[T]] = []
   let mut pos = 0
@@ -348,7 +360,7 @@ pub fn[T : Spanning] Runs::range(
       break
     }
   }
-  Ok(result.iter())
+  result.iter()
 }
 
 ///|
@@ -364,10 +376,7 @@ pub fn[T : Spanning] Runs::range_clamped(
   if s >= e {
     return Iter::empty()
   }
-  match self.range(start=s, end=e) {
-    Ok(it) => it
-    Err(_) => Iter::empty()
-  }
+  self.range_unchecked(start=s, end=e)
 }
 
 ///|
@@ -466,17 +475,7 @@ pub fn[T : Mergeable + Spanning] Runs::concat(
     if T::span(item) <= 0 {
       continue
     }
-    let mut cur = item
-    while !out.is_empty() {
-      let last = out[out.length() - 1]
-      if T::can_merge(last, cur) {
-        let _ = out.pop()
-        cur = T::merge(last, cur)
-      } else {
-        break
-      }
-    }
-    out.push(cur)
+    push_normalized(out, item)
   }
   Runs(out)
 }
@@ -494,17 +493,7 @@ pub fn[T : Mergeable + Spanning] Runs::extend(
     if T::span(item) <= 0 {
       continue
     }
-    let mut cur = item
-    while !self.0.is_empty() {
-      let last = self.0[self.0.length() - 1]
-      if T::can_merge(last, cur) {
-        let _ = self.0.pop()
-        cur = T::merge(last, cur)
-      } else {
-        break
-      }
-    }
-    self.0.push(cur)
+    push_normalized(self.0, item)
   }
 }
 

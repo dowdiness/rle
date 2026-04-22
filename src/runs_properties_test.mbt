@@ -182,7 +182,10 @@ fn prop_no_adjacent_mergeable(strings : Array[String]) -> Bool {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   for s in strings {
     if s.iter().count() > 0 {
-      let _ = runs.append(s)
+      match runs.append(s) {
+        Ok(_) => ()
+        Err(_) => return false
+      }
     }
   }
   let items = runs.to_array()
@@ -212,12 +215,13 @@ fn prop_range_coverage(text : String) -> Bool {
   match rle.range(start~, end~) {
     Ok(iter) => {
       let slices = iter.collect()
-      let total_len = slices.fold(init=0, fn(acc, slice) {
+      let mut total_len = 0
+      for slice in slices {
         match slice.to_inner() {
-          Ok(value) => acc + @rle.Spanning::span(value)
-          Err(_) => acc
+          Ok(value) => total_len = total_len + @rle.Spanning::span(value)
+          Err(_) => return false
         }
-      })
+      }
       total_len == end - start
     }
     Err(_) => false
@@ -430,4 +434,44 @@ fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
 ///|
 test "property: from_sorted_ints → iter_units round-trip" {
   @qc.quick_check_fn(prop_from_sorted_iter_roundtrip)
+}
+
+///|
+/// Property: cached prefix lookup is equivalent to linear lookup.
+fn prop_find_fast_matches_find(texts : Array[String]) -> Bool {
+  let runs = @rle.Runs::from_array(texts)
+  let sums = runs.prefix_sums()
+  let total = runs.span()
+  if sums.length() != runs.length() {
+    return false
+  }
+  for i = 0; i < sums.length(); i = i + 1 {
+    let current = match sums.span_at(i) {
+      Some(value) => value
+      None => return false
+    }
+    if current <= sums.span_before(i) {
+      return false
+    }
+  }
+  for pos = -1; pos <= total; pos = pos + 1 {
+    if runs.find_fast(sums, pos) != runs.find(pos) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+test "property: find_fast matches find and prefix sums are monotonic" {
+  @qc.quick_check_fn(prop_find_fast_matches_find)
+}
+
+///|
+/// Representative corpus used to verify invariant tests exercise important
+/// boundaries that random generation may not hit in every run.
+test "safety corpus covers boundary inputs" {
+  let cases = ["", "a", "ab", "hello world", "😀", "a😀b", "    "]
+  let lengths = cases.map(fn(text) { @rle.Spanning::span(text) })
+  inspect(lengths, content="[0, 1, 2, 11, 2, 4, 4]")
 }
