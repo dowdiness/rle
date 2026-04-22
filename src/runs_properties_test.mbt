@@ -182,7 +182,10 @@ fn prop_no_adjacent_mergeable(strings : Array[String]) -> Bool {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   for s in strings {
     if s.iter().count() > 0 {
-      let _ = runs.append(s)
+      match runs.append(s) {
+        Ok(_) => ()
+        Err(_) => return false
+      }
     }
   }
   let items = runs.to_array()
@@ -212,12 +215,13 @@ fn prop_range_coverage(text : String) -> Bool {
   match rle.range(start~, end~) {
     Ok(iter) => {
       let slices = iter.collect()
-      let total_len = slices.fold(init=0, fn(acc, slice) {
+      let mut total_len = 0
+      for slice in slices {
         match slice.to_inner() {
-          Ok(value) => acc + @rle.Spanning::span(value)
-          Err(_) => acc
+          Ok(value) => total_len = total_len + @rle.Spanning::span(value)
+          Err(_) => return false
         }
-      })
+      }
       total_len == end - start
     }
     Err(_) => false
@@ -407,14 +411,10 @@ impl @rle.Mergeable for PropRange with merge(a, b) {
 }
 
 ///|
-/// Property: from_sorted_ints → iter_units round-trip preserves values.
-/// Takes arbitrary non-negative ints, sorts and deduplicates, then verifies round-trip.
-fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
-  // Transform to strictly sorted non-negative ints
+fn sorted_unique_limited(raw : Array[Int]) -> Array[Int] {
   let filtered = raw.filter(fn(x) { x >= 0 && x < 10000 })
   let sorted = filtered.copy()
   sorted.sort()
-  // Deduplicate
   let deduped : Array[Int] = []
   for v in sorted {
     match deduped.last() {
@@ -422,6 +422,14 @@ fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
       None => deduped.push(v)
     }
   }
+  deduped
+}
+
+///|
+/// Property: from_sorted_ints → iter_units round-trip preserves values.
+/// Takes arbitrary non-negative ints, sorts and deduplicates, then verifies round-trip.
+fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
+  let deduped = sorted_unique_limited(raw)
   let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(deduped)
   let result = rle.iter_units().collect()
   result == deduped
@@ -430,4 +438,116 @@ fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
 ///|
 test "property: from_sorted_ints → iter_units round-trip" {
   @qc.quick_check_fn(prop_from_sorted_iter_roundtrip)
+}
+
+///|
+/// Property: cached prefix lookup is equivalent to linear lookup.
+fn prop_find_fast_matches_find(texts : Array[String]) -> Bool {
+  let runs = @rle.Runs::from_array(texts)
+  let sums = runs.prefix_sums()
+  let total = runs.span()
+  if sums.length() != runs.length() {
+    return false
+  }
+  for i = 0; i < sums.length(); i = i + 1 {
+    let current = match sums.span_at(i) {
+      Some(value) => value
+      None => return false
+    }
+    if current <= sums.span_before(i) {
+      return false
+    }
+  }
+  for pos = -1; pos <= total; pos = pos + 1 {
+    if runs.find_fast(sums, pos) != runs.find(pos) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+test "property: find_fast matches find and prefix sums are monotonic" {
+  @qc.quick_check_fn(prop_find_fast_matches_find)
+}
+
+///|
+/// Property: cursor seek positions match Rle::find over multi-run data.
+fn prop_cursor_seek_matches_find(raw : Array[Int]) -> Bool {
+  let values = sorted_unique_limited(raw)
+  let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(values)
+  let total = rle.span()
+  let cursor = rle.cursor()
+  if cursor.seek(-1) || cursor.position() != Some(0) {
+    return false
+  }
+  for pos = 0; pos < total; pos = pos + 1 {
+    if !cursor.seek(pos) {
+      return false
+    }
+    if cursor.position() != Some(pos) {
+      return false
+    }
+    match (cursor.current(), rle.find(pos)) {
+      (Some((_, cursor_offset)), Some(found)) =>
+        if cursor_offset != found.offset {
+          return false
+        }
+      _ => return false
+    }
+  }
+  if !cursor.seek(total) {
+    return false
+  }
+  match cursor.current() {
+    Some(_) => false
+    None => cursor.position() == Some(total) && cursor.at_end()
+  }
+}
+
+///|
+test "property: cursor seek matches find over run boundaries" {
+  @qc.quick_check_fn(prop_cursor_seek_matches_find)
+}
+
+///|
+/// Property: cursor advance/retreat lands on the same positions as seek.
+fn prop_cursor_move_matches_seek(raw : Array[Int]) -> Bool {
+  let values = sorted_unique_limited(raw)
+  let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(values)
+  let total = rle.span()
+  for target = 0; target <= total; target = target + 1 {
+    let via_seek = rle.cursor()
+    if !via_seek.seek(target) {
+      return false
+    }
+    let via_advance = rle.cursor()
+    if !via_advance.advance(target) {
+      return false
+    }
+    if via_advance.position() != via_seek.position() {
+      return false
+    }
+    if !via_advance.retreat(target) {
+      return false
+    }
+    if via_advance.position() != Some(0) {
+      return false
+    }
+  }
+  true
+}
+
+///|
+test "property: cursor advance and retreat match seek" {
+  @qc.quick_check_fn(prop_cursor_move_matches_seek)
+}
+
+///|
+/// Representative corpus used to verify invariant tests exercise important
+/// boundaries that random generation may not hit in every run.
+test "safety corpus covers boundary inputs" {
+  let cases = ["", "a", "ab", "hello world", "😀", "a😀b", "    "]
+  let lengths = cases.map(fn(text) { @rle.Spanning::span(text) })
+  inspect(lengths, content="[0, 1, 2, 11, 2, 4, 4]")
 }

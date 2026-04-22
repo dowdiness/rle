@@ -155,6 +155,17 @@ test "Rle::range_clamped clamps bounds" {
 }
 
 ///|
+test "Rle::range_clamped keeps lazy slice boundary validation explicit" {
+  let rle = @rle.Rle::from_string("A😀B")
+  let slices = rle.range_clamped(start=2, end=4).collect()
+  inspect(slices.length(), content="1")
+  match slices[0].to_inner() {
+    Ok(_) => fail("materializing a slice inside a surrogate pair should fail")
+    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  }
+}
+
+///|
 test "Rle::split at mid" {
   let rle = @rle.Rle::from_string("hello")
   match rle.split(2) {

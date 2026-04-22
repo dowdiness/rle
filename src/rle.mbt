@@ -181,6 +181,13 @@ fn[T] Rle::invalidate(self : Rle[T]) -> Unit {
 }
 
 ///|
+/// Apply the mutation protocol shared by all in-place structural changes.
+fn[T] Rle::mark_mutated(self : Rle[T]) -> Unit {
+  self.bump_version()
+  self.invalidate()
+}
+
+///|
 /// Rebuild prefix sums if stale
 fn[T : Spanning] Rle::ensure_prefix(self : Rle[T]) -> PrefixSums {
   match self.prefix {
@@ -237,8 +244,7 @@ pub fn[T : Mergeable + Spanning] Rle::append(
 ) -> Result[Unit, RleError] {
   match self.runs.append(elem) {
     Ok(_) => {
-      self.bump_version()
-      self.invalidate()
+      self.mark_mutated()
       Ok(())
     }
     Err(e) => Err(e)
@@ -271,12 +277,23 @@ pub fn[T : Spanning] Rle::range(
     Ok(_) => ()
     Err(e) => return Err(e)
   }
+  Ok(self.range_unchecked(sums, start~, end~))
+}
+
+///|
+/// Build range slices after the caller has already validated or clamped bounds.
+fn[T] Rle::range_unchecked(
+  self : Rle[T],
+  sums : PrefixSums,
+  start~ : Int,
+  end~ : Int,
+) -> Iter[Slice[T]] {
   if start == end {
-    return Ok(Iter::empty())
+    return Iter::empty()
   }
   // Use binary search to find starting run
   let start_pos = self.runs.find_fast(sums, start)
-  guard start_pos is Some(sp) else { return Ok(Iter::empty()) }
+  guard start_pos is Some(sp) else { return Iter::empty() }
   let result : Array[Slice[T]] = []
   let mut i = sp.run
   let mut prefix = sums.span_before(i)
@@ -298,7 +315,7 @@ pub fn[T : Spanning] Rle::range(
     prefix = item_end
     i = i + 1
   }
-  Ok(result.iter())
+  result.iter()
 }
 
 ///|
@@ -314,10 +331,7 @@ pub fn[T : Spanning] Rle::range_clamped(
   if s >= e {
     return Iter::empty()
   }
-  match self.range(start=s, end=e) {
-    Ok(it) => it
-    Err(_) => Iter::empty()
-  }
+  self.range_unchecked(self.ensure_prefix(), start=s, end=e)
 }
 
 ///|
@@ -336,8 +350,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::split(
 /// Clear all runs - invalidates cache and bumps version
 pub fn[T] Rle::clear(self : Rle[T]) -> Unit {
   self.runs.clear()
-  self.bump_version()
-  self.invalidate()
+  self.mark_mutated()
 }
 
 ///|
@@ -372,8 +385,7 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
     None => 0
   }
   if new_count != old_count || new_last_span != old_last_span {
-    self.bump_version()
-    self.invalidate()
+    self.mark_mutated()
   }
 }
 
