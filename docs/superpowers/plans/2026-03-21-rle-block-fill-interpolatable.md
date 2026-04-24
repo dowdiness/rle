@@ -12,7 +12,7 @@
 
 **Dev workflow (every task):** edit → `moon check` → `moon test` → `moon test --update` if snapshots changed → `moon info` → check `.mbti` diffs → `moon fmt` → commit.
 
-**Codebase:** `/home/antisatori/ghq/github.com/dowdiness/crdt/rle`
+**Codebase:** `/home/antisatori/ghq/github.com/dowdiness/canopy/rle`
 
 ---
 

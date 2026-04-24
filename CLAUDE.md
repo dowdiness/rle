@@ -24,7 +24,7 @@ moon build            # Build
 moon update           # Update dependencies
 ```
 
-All code lives in `src/` — single package (`dowdiness/rle`), no sub-packages.
+Core library lives in `src/` (package `dowdiness/rle`). Example sub-packages under `src/example/{string,pixel,authored}` each have their own `moon.pkg`.
 
 ## Architecture Rules
 
