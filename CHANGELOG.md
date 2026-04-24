@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-24
+
+### Breaking
+- Import path changed from `dowdiness/rle/rle` to `dowdiness/rle` (source relocated to `src/` via `moon.mod.json` `source: "src"`). Consumers must update import paths.
+- `Show` derives migrated to `Debug` on `Rle`, `RleCursor`, `Runs`, and `Slice` (MoonBit v0.9). Consumers using `Show` on these types must switch to `Debug`.
+- `BenchRun` removed from the public API (benchmarking-only type; now private).
+
+### Added
+- `Rle::iter_units` and `Runs::iter_units` — iterate individual logical units with per-run value caching.
+- `Rle::each_with_position` — position-aware iteration over runs.
+- `Rle::from_sorted_ints` and `Runs::from_sorted_ints` — construct from a sorted integer sequence; duplicates are skipped.
+- `FromRange` and `Addressable` traits enabling algorithm-by-trait patterns on RLE structures.
+- `README.mbt.md` — runnable doc tests alongside the README.
+
+### Changed
+- Source layout moved to `src/`; example sub-packages (`string`, `pixel`, `authored`) now live under `src/example/`.
+- Per-run value caching in `iter_units` / `each_with_position` reduces redundant computation during unit-level iteration.
+
 ## [0.1.0] - 2026-03-15
 
 Initial public release.
