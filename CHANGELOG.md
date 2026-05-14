@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-05-14
+
+### Added
+- Added `Rle::Rle()` and `PrefixSums::PrefixSums()` as the preferred constructors.
+
+### Deprecated
+- Deprecated `Rle::new()` and `PrefixSums::new()` in favor of `Rle::Rle()` and `PrefixSums::PrefixSums()`.
+
+### Fixed
+- Removed the stale generated `Runs::inner(Self[T]) -> Array[T]` API entry. Use `Runs::to_array()` to copy runs into a new array.
+- Refreshed stale snapshot and README doctest expectations after output format changes.
+- Removed warning-producing old constructor usage so checks pass with warnings denied.
+
 ## [0.2.0] - 2026-04-24
 
 ### Breaking
