@@ -52,31 +52,34 @@ test "Runs::logical_length returns total logical length" {
 ///|
 test "Runs::find finds correct position" {
   let runs = @rle.Runs::from_string("abcdef")
-  inspect(
-    runs.find(3),
-    content=(
-      #|Some({ run: 0, offset: 3 })
-    ),
-  )
+  match runs.find(3) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="3")
+    }
+    None => fail("find should succeed")
+  }
 }
 
 ///|
 test "Runs::find at boundaries" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(
-    runs.find(0),
-    content=(
-      #|Some({ run: 0, offset: 0 })
-    ),
-  )
-  inspect(
-    runs.find(4),
-    content=(
-      #|Some({ run: 0, offset: 4 })
-    ),
-  )
-  inspect(runs.find(5), content="None")
-  inspect(runs.find(-1), content="None")
+  match runs.find(0) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="0")
+    }
+    None => fail("find should succeed")
+  }
+  match runs.find(4) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="4")
+    }
+    None => fail("find should succeed")
+  }
+  inspect(runs.find(5) is None, content="true")
+  inspect(runs.find(-1) is None, content="true")
 }
 
 ///|
@@ -213,16 +216,24 @@ test "Runs::clear empties the runs" {
 ///|
 test "Runs::get retrieves run by index" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.get(0), content="Some(\"hello\")")
-  inspect(runs.get(1), content="None")
-  inspect(runs.get(-1), content="None")
+  match runs.get(0) {
+    Some(value) => inspect(value, content="hello")
+    None => fail("expected run at index 0")
+  }
+  inspect(runs.get(1) is None, content="true")
+  inspect(runs.get(-1) is None, content="true")
 }
 
 ///|
 test "Runs::iter_chars iterates codepoints" {
   let runs = @rle.Runs::from_string("hello")
   let chars = runs.iter_chars().collect()
-  inspect(chars, content="['h', 'e', 'l', 'l', 'o']")
+  inspect(chars.length(), content="5")
+  inspect(chars[0] == 'h', content="true")
+  inspect(chars[1] == 'e', content="true")
+  inspect(chars[2] == 'l', content="true")
+  inspect(chars[3] == 'l', content="true")
+  inspect(chars[4] == 'o', content="true")
 }
 
 ///|
@@ -236,12 +247,13 @@ test "Runs::from_array merges and skips empty" {
 test "Runs unicode handling" {
   let runs = @rle.Runs::from_string("こんにちは")
   inspect(runs.span(), content="5")
-  inspect(
-    runs.find(2),
-    content=(
-      #|Some({ run: 0, offset: 2 })
-    ),
-  )
+  match runs.find(2) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="2")
+    }
+    None => fail("find should succeed")
+  }
 }
 
 ///|

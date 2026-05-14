@@ -175,16 +175,16 @@ pub impl @qc.Shrink for PrefixSums with shrink(sums) {
   // Remove last entry
   if len > 1 {
     results.push({
-      spans: sums.spans[:len - 1].to_array(),
-      content: sums.content[:len - 1].to_array(),
+      spans: sums.spans[:len - 1].to_owned(),
+      content: sums.content[:len - 1].to_owned(),
     })
   }
   // Take first half
   if len > 2 {
     let half = len / 2
     results.push({
-      spans: sums.spans[:half].to_array(),
-      content: sums.content[:half].to_array(),
+      spans: sums.spans[:half].to_owned(),
+      content: sums.content[:half].to_owned(),
     })
   }
   results.iter()

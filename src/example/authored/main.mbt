@@ -8,11 +8,6 @@ struct AuthoredRun {
 } derive(Debug, Eq)
 
 ///|
-impl Show for AuthoredRun with output(self, logger) {
-  logger.write_string(@debug.to_string(self))
-}
-
-///|
 impl @rle.Mergeable for AuthoredRun with can_merge(
   a : AuthoredRun,
   b : AuthoredRun,
@@ -55,29 +50,37 @@ fn authored(author : String, text : String) -> AuthoredRun {
 }
 
 ///|
+fn print_authored(run : AuthoredRun?) -> Unit {
+  match run {
+    Some(run) => println("Some({author: \{run.author}, text: \{run.text}})")
+    None => println("None")
+  }
+}
+
+///|
 fn main {
   println("=== Same-Author Merge ===")
-  let rle : @rle.Rle[AuthoredRun] = @rle.Rle::new()
+  let rle : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
   rle.append(authored("alice", "Hello")) |> println //=> Ok(())
   rle.append(authored("alice", ", world")) |> println //=> Ok(())
   rle.length() |> println //=> 1  (merged)
-  rle.get(0) |> println //=> Some({author: "alice", text: "Hello, world"})
+  print_authored(rle.get(0)) //=> Some({author: "alice", text: "Hello, world"})
 
   println("\n=== Different-Author Separation ===")
-  let rle2 : @rle.Rle[AuthoredRun] = @rle.Rle::new()
+  let rle2 : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
   rle2.append(authored("alice", "Hello")) |> println
   rle2.append(authored("bob", " world")) |> println
   rle2.length() |> println //=> 2  (kept separate)
-  rle2.get(0) |> println //=> Some({author: "alice", text: "Hello"})
-  rle2.get(1) |> println //=> Some({author: "bob",   text: " world"})
+  print_authored(rle2.get(0)) //=> Some({author: "alice", text: "Hello"})
+  print_authored(rle2.get(1)) //=> Some({author: "bob",   text: " world"})
 
   println("\n=== Split at Author Boundary ===")
   match rle2.split(5) {
     Ok((left, right)) => {
       left.length() |> println //=> 1
       right.length() |> println //=> 1
-      left.get(0) |> println //=> Some({author: "alice", text: "Hello"})
-      right.get(0) |> println //=> Some({author: "bob",   text: " world"})
+      print_authored(left.get(0)) //=> Some({author: "alice", text: "Hello"})
+      print_authored(right.get(0)) //=> Some({author: "bob",   text: " world"})
     }
     Err(e) => e |> println
   }
@@ -106,6 +109,6 @@ fn main {
   ]
   let rle3 = @rle.Rle::from_array(runs)
   rle3.length() |> println //=> 2  (alice merged, bob separate)
-  rle3.get(0) |> println //=> Some({author: "alice", text: "foobar"})
-  rle3.get(1) |> println //=> Some({author: "bob",   text: "baz"})
+  print_authored(rle3.get(0)) //=> Some({author: "alice", text: "foobar"})
+  print_authored(rle3.get(1)) //=> Some({author: "bob",   text: "baz"})
 }

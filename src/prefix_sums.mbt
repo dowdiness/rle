@@ -14,8 +14,6 @@
 pub(all) struct PrefixSums {
   spans : Array[Int] // cumulative span lengths
   content : Array[Int] // cumulative content lengths
-
-  fn new() -> PrefixSums
 } derive(Debug, Eq)
 
 ///|
@@ -25,8 +23,15 @@ pub impl Show for PrefixSums with output(self, logger) {
 
 ///|
 /// Create an empty prefix sum table.
-pub fn PrefixSums::new() -> PrefixSums {
+pub fn PrefixSums::PrefixSums() -> PrefixSums {
   { spans: [], content: [] }
+}
+
+///|
+/// Create an empty prefix sum table.
+#deprecated("Use PrefixSums::PrefixSums() instead", skip_current_package=true)
+pub fn PrefixSums::new() -> PrefixSums {
+  PrefixSums()
 }
 
 ///|

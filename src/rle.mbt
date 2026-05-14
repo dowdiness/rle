@@ -29,8 +29,6 @@ pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums? // None = stale, needs rebuild
   mut version : Int // Monotonically increasing mutation counter
-
-  fn[T] new() -> Rle[T]
 } derive(Debug, Eq)
 
 ///|
@@ -40,8 +38,15 @@ pub impl[T : Debug] Show for Rle[T] with output(self, logger) {
 
 ///|
 /// Create an empty Rle with no runs
-pub fn[T] Rle::new() -> Rle[T] {
+pub fn[T] Rle::Rle() -> Rle[T] {
   { runs: Runs::new(), prefix: None, version: 0 }
+}
+
+///|
+/// Create an empty Rle with no runs
+#deprecated("Use Rle::Rle() instead", skip_current_package=true)
+pub fn[T] Rle::new() -> Rle[T] {
+  Rle()
 }
 
 ///|

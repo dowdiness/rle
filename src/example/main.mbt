@@ -5,10 +5,13 @@ fn main {
 
   // Length and lookup
   rle.span() |> println //=> 11
-  rle.find(6) |> println //=> Some({run: 0, offset: 6})
+  match rle.find(6) {
+    Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
+    None => println("None")
+  }
 
   // Append merges automatically (strings always merge)
-  let rle = @rle.Rle::new()
+  let rle = @rle.Rle::Rle()
   rle.append("hello") |> println // Ok(())
   rle.append(" world") |> println // Ok(()) — merged into one run
   rle.length() |> println //=> 1
@@ -41,12 +44,21 @@ fn cursor() -> Unit {
   let cursor = rle.cursor()
 
   cursor.advance(3) |> println //=> true
-  cursor.position() |> println //=> Some(3)
-  cursor.current_item() |> println //=> Some("abcdef")
+  match cursor.position() {
+    Some(position) => println("Some(\{position})")
+    None => println("None")
+  }
+  match cursor.current_item() {
+    Some(item) => println("Some(\"\{item}\")")
+    None => println("None")
+  }
 
   // Mutation invalidates the cursor
   rle.append("ghi") |> println
   cursor.is_stale() |> println //=> true
-  cursor.next() |> println //=> None (stale cursors refuse to operate)
+  match cursor.next() {
+    Some(item) => println("Some(\"\{item}\")")
+    None => println("None")
+  }
   println(rle)
 }

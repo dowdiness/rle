@@ -63,7 +63,7 @@ pub fn slice_string_view(
     ) {
     return Err(SliceError::InvalidIndex)
   }
-  Ok(text[start:end].to_string())
+  Ok(text[start:end].to_owned())
 }
 
 ///|
