@@ -16,12 +16,13 @@ test {
 
   // Length and lookup
   inspect(rle.span(), content="11")
-  inspect(
-    rle.find(6),
-    content=(
-      #|Some({ run: 0, offset: 6 })
-    ),
-  )
+  match rle.find(6) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="6")
+    }
+    None => fail("find should succeed")
+  }
 }
 ```
 
@@ -30,7 +31,7 @@ Append merges automatically (strings always merge into one run):
 ```mbt check
 ///|
 test {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let _ = rle.append("hello")
   let _ = rle.append(" world")
   inspect(rle.length(), content="1")
@@ -59,10 +60,10 @@ test {
   let slices = rle.range(start=1, end=4).unwrap().collect()
   inspect(slices.length(), content="1")
   let s = slices[0]
-  inspect(
-    @rle.Sliceable::slice(s.value, start=s.start, end=s.end),
-    content="Ok(\"ell\")",
-  )
+  match @rle.Sliceable::slice(s.value, start=s.start, end=s.end) {
+    Ok(value) => inspect(value, content="ell")
+    Err(_) => fail("slice should succeed")
+  }
 }
 ```
 
@@ -126,12 +127,21 @@ test {
   let cursor = rle.cursor()
 
   inspect(cursor.advance(3), content="true")
-  inspect(cursor.position(), content="Some(3)")
-  inspect(cursor.current_item(), content="Some(\"abcdef\")")
+  match cursor.position() {
+    Some(position) => inspect(position, content="3")
+    None => fail("cursor position should be available")
+  }
+  match cursor.current_item() {
+    Some(item) => inspect(item, content="abcdef")
+    None => fail("cursor item should be available")
+  }
 
   // seek() uses binary search — O(log n)
   inspect(cursor.seek(1), content="true")
-  inspect(cursor.position(), content="Some(1)")
+  match cursor.position() {
+    Some(position) => inspect(position, content="1")
+    None => fail("cursor position should be available")
+  }
 }
 ```
 
@@ -146,7 +156,7 @@ test {
 
   let _ = rle.append("ghi")
   inspect(cursor.is_stale(), content="true")
-  inspect(cursor.next(), content="None")
+  inspect(cursor.next() is None, content="true")
 }
 ```
 
@@ -181,20 +191,22 @@ test {
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  inspect(
-    rle.find(0),
-    content=(
-      #|Some({ run: 0, offset: 0 })
-    ),
-  )
-  inspect(
-    rle.find(4),
-    content=(
-      #|Some({ run: 0, offset: 4 })
-    ),
-  )
-  inspect(rle.find(5), content="None")
-  inspect(rle.find(-1), content="None")
+  match rle.find(0) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="0")
+    }
+    None => fail("find should succeed")
+  }
+  match rle.find(4) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="4")
+    }
+    None => fail("find should succeed")
+  }
+  inspect(rle.find(5) is None, content="true")
+  inspect(rle.find(-1) is None, content="true")
 }
 ```
 
@@ -204,7 +216,10 @@ test {
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.value_at(2), content="Ok(\"hello\")")
+  match rle.value_at(2) {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("value_at should succeed")
+  }
   inspect(rle.value_at(5) is Err(_), content="true")
 }
 ```
@@ -245,7 +260,7 @@ The version counter increments on every mutation:
 ```mbt check
 ///|
 test {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.get_version(), content="0")
   let _ = rle.append("a")
   inspect(rle.get_version(), content="1")
@@ -306,8 +321,8 @@ Appending an empty string returns an error:
 ```mbt check
 ///|
 test {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
-  inspect(rle.append(""), content="Err(Internal(EmptyElement))")
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
+  inspect(rle.append("") is Err(_), content="true")
 }
 ```
 
@@ -332,7 +347,8 @@ test {
   inspect(rle.span(), content="2")
   match rle.split(1) {
     Ok(_) => fail("should fail on invalid boundary")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+    Err(e) =>
+      inspect(e.message(), content="Slice indices are not on valid boundaries")
   }
 }
 ```
@@ -363,12 +379,13 @@ BMP characters (CJK) work as expected:
 test {
   let rle = @rle.Rle::from_string("こんにちは")
   inspect(rle.span(), content="5")
-  inspect(
-    rle.find(2),
-    content=(
-      #|Some({ run: 0, offset: 2 })
-    ),
-  )
+  match rle.find(2) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="2")
+    }
+    None => fail("find should succeed")
+  }
   match rle.split(1) {
     Ok((left, right)) => {
       inspect(left.to_string(), content="こ")
@@ -442,9 +459,9 @@ test {
   let slices = rle.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
   let s = slices[0]
-  inspect(
-    @rle.Sliceable::slice(s.value, start=s.start, end=s.end),
-    content="Ok(\"hello\")",
-  )
+  match @rle.Sliceable::slice(s.value, start=s.start, end=s.end) {
+    Ok(value) => inspect(value, content="hello")
+    Err(_) => fail("slice should succeed")
+  }
 }
 ```

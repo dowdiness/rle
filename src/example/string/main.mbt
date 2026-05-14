@@ -1,4 +1,28 @@
 ///|
+fn print_run_pos(pos : @rle.RunPos?) -> Unit {
+  match pos {
+    Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
+    None => println("None")
+  }
+}
+
+///|
+fn print_position(position : Int?) -> Unit {
+  match position {
+    Some(position) => println("Some(\{position})")
+    None => println("None")
+  }
+}
+
+///|
+fn print_string(value : String?) -> Unit {
+  match value {
+    Some(value) => println("Some(\"\{value}\")")
+    None => println("None")
+  }
+}
+
+///|
 fn main {
   println("=== Construction & Span ===")
   let rle = @rle.Rle::from_string("hello world")
@@ -7,12 +31,12 @@ fn main {
   rle.logical_length() |> println //=> 11
 
   println("\n=== Find ===")
-  rle.find(0) |> println //=> Some({run: 0, offset: 0})
-  rle.find(6) |> println //=> Some({run: 0, offset: 6})
-  rle.find(11) |> println //=> None  (past end)
+  print_run_pos(rle.find(0)) //=> Some({run: 0, offset: 0})
+  print_run_pos(rle.find(6)) //=> Some({run: 0, offset: 6})
+  print_run_pos(rle.find(11)) //=> None  (past end)
 
   println("\n=== Append (auto-merge) ===")
-  let rle2 : @rle.Rle[String] = @rle.Rle::new()
+  let rle2 : @rle.Rle[String] = @rle.Rle::Rle()
   rle2.append("hello") |> println //=> Ok(())
   rle2.append(", ") |> println //=> Ok(())
   rle2.append("world") |> println //=> Ok(())
@@ -59,17 +83,17 @@ fn main {
   let rle5 = @rle.Rle::from_string("abcdef")
   let cursor = rle5.cursor()
   cursor.advance(3) |> println //=> true
-  cursor.position() |> println //=> Some(3)
-  cursor.current_item() |> println //=> Some("abcdef")  (full run — strings always merge into one)
+  print_position(cursor.position()) //=> Some(3)
+  print_string(cursor.current_item()) //=> Some("abcdef")  (full run — strings always merge into one)
   cursor.seek(0) |> println //=> true
-  cursor.position() |> println //=> Some(0)
+  print_position(cursor.position()) //=> Some(0)
 
   println("\n=== Cursor Staleness ===")
   let rle6 = @rle.Rle::from_string("hello")
   let cursor2 = rle6.cursor()
   rle6.append(" world") |> println //=> Ok(())
   cursor2.is_stale() |> println //=> true
-  cursor2.next() |> println //=> None  (stale)
+  print_string(cursor2.next()) //=> None  (stale)
 
   println("\n=== Error Messages ===")
   match rle.split(99) {

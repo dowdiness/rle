@@ -1,8 +1,8 @@
 ///| Blackbox tests for Rle (cached prefix sums) public API
 
 ///|
-test "Rle::new creates empty" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+test "Rle::Rle creates empty" {
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.is_empty(), content="true")
   inspect(rle.length(), content="0")
 }
@@ -23,7 +23,7 @@ test "Rle::from_string with empty string" {
 
 ///|
 test "Rle::append merges adjacent runs" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let _ = rle.append("hello")
   let _ = rle.append(" world")
   inspect(rle.length(), content="1")
@@ -32,7 +32,7 @@ test "Rle::append merges adjacent runs" {
 
 ///|
 test "Rle::append rejects empty element" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let result = rle.append("")
   inspect(result, content="Err(Internal(EmptyElement))")
 }
@@ -65,31 +65,34 @@ test "Rle::append invalidates cache" {
 ///|
 test "Rle::find uses binary search" {
   let rle = @rle.Rle::from_string("abcdef")
-  inspect(
-    rle.find(3),
-    content=(
-      #|Some({ run: 0, offset: 3 })
-    ),
-  )
+  match rle.find(3) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="3")
+    }
+    None => fail("find should succeed")
+  }
 }
 
 ///|
 test "Rle::find at boundaries" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(
-    rle.find(0),
-    content=(
-      #|Some({ run: 0, offset: 0 })
-    ),
-  )
-  inspect(
-    rle.find(4),
-    content=(
-      #|Some({ run: 0, offset: 4 })
-    ),
-  )
-  inspect(rle.find(5), content="None")
-  inspect(rle.find(-1), content="None")
+  match rle.find(0) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="0")
+    }
+    None => fail("find should succeed")
+  }
+  match rle.find(4) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="4")
+    }
+    None => fail("find should succeed")
+  }
+  inspect(rle.find(5) is None, content="true")
+  inspect(rle.find(-1) is None, content="true")
 }
 
 ///|
@@ -226,15 +229,23 @@ test "Rle::clear empties and invalidates cache" {
 ///|
 test "Rle::get retrieves run by index" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.get(0), content="Some(\"hello\")")
-  inspect(rle.get(1), content="None")
+  match rle.get(0) {
+    Some(value) => inspect(value, content="hello")
+    None => fail("expected run at index 0")
+  }
+  inspect(rle.get(1) is None, content="true")
 }
 
 ///|
 test "Rle::iter_chars iterates codepoints" {
   let rle = @rle.Rle::from_string("hello")
   let chars = rle.iter_chars().collect()
-  inspect(chars, content="['h', 'e', 'l', 'l', 'o']")
+  inspect(chars.length(), content="5")
+  inspect(chars[0] == 'h', content="true")
+  inspect(chars[1] == 'e', content="true")
+  inspect(chars[2] == 'l', content="true")
+  inspect(chars[3] == 'l', content="true")
+  inspect(chars[4] == 'o', content="true")
 }
 
 ///|
@@ -248,12 +259,13 @@ test "Rle::from_array merges and skips empty" {
 test "Rle unicode handling" {
   let rle = @rle.Rle::from_string("こんにちは")
   inspect(rle.span(), content="5")
-  inspect(
-    rle.find(2),
-    content=(
-      #|Some({ run: 0, offset: 2 })
-    ),
-  )
+  match rle.find(2) {
+    Some(pos) => {
+      inspect(pos.run, content="0")
+      inspect(pos.offset, content="2")
+    }
+    None => fail("find should succeed")
+  }
 }
 
 ///|
@@ -330,7 +342,7 @@ test "RleError::message for InvalidRange ExceedsLength" {
 
 ///|
 test "RleError::message for Internal EmptyElement" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   match rle.append("") {
     Ok(_) => fail("should fail")
     Err(e) =>
@@ -380,8 +392,8 @@ test "stale cursor current returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let _ = rle.append(" world")
-  inspect(cursor.current(), content="None")
-  inspect(cursor.current_item(), content="None")
+  inspect(cursor.current() is None, content="true")
+  inspect(cursor.current_item() is None, content="true")
 }
 
 ///|
@@ -422,7 +434,7 @@ test "stale cursor next returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let _ = rle.append(" world")
-  inspect(cursor.next(), content="None")
+  inspect(cursor.next() is None, content="true")
 }
 
 ///|
@@ -431,7 +443,7 @@ test "stale cursor prev returns None" {
   let cursor = rle.cursor()
   let _ = cursor.advance(2)
   let _ = rle.append(" world")
-  inspect(cursor.prev(), content="None")
+  inspect(cursor.prev() is None, content="true")
 }
 
 ///|
@@ -448,20 +460,23 @@ test "stale cursor position returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let _ = cursor.advance(3)
-  inspect(cursor.position(), content="Some(3)")
+  match cursor.position() {
+    Some(position) => inspect(position, content="3")
+    None => fail("cursor position should be available")
+  }
   let _ = rle.append(" world")
-  inspect(cursor.position(), content="None")
+  inspect(cursor.position() is None, content="true")
 }
 
 ///|
 test "Rle::get_version starts at 0" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.get_version(), content="0")
 }
 
 ///|
 test "Rle::get_version increments on mutation" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let _ = rle.append("a")
   inspect(rle.get_version(), content="1")
   let _ = rle.append("b")
@@ -510,7 +525,7 @@ test "Rle::value_at out of bounds" {
 
 ///|
 test "Rle::value_at empty rle" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.value_at(0) is Err(_), content="true")
 }
 
@@ -560,7 +575,7 @@ test "Rle::insert out of bounds" {
 ///|
 test "Rle::insert empty element" {
   let rle = @rle.Rle::from_string("hello")
-  let elem : @rle.Rle[String] = @rle.Rle::new()
+  let elem : @rle.Rle[String] = @rle.Rle::Rle()
   match rle.insert(2, elem) {
     Ok(result) => inspect(result.to_string(), content="hello")
     Err(_) => fail("inserting empty should succeed")
@@ -669,7 +684,7 @@ test "Rle::splice insert (empty range)" {
 ///|
 test "Rle::splice delete (empty replacement)" {
   let rle = @rle.Rle::from_string("hello world")
-  let replacement : @rle.Rle[String] = @rle.Rle::new()
+  let replacement : @rle.Rle[String] = @rle.Rle::Rle()
   match rle.splice(start=5, end=6, replacement) {
     Ok(result) => inspect(result.to_string(), content="helloworld")
     Err(_) => fail("splice with empty replacement should succeed")
@@ -740,7 +755,7 @@ test "Runs::from_array_batch handles all empty elements" {
 
 ///|
 test "HasLength::is_empty - empty Rle" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.is_empty(), content="true")
 }
 
@@ -757,7 +772,7 @@ fn[T : @rle.HasLength] check_empty(x : T) -> Bool {
 
 ///|
 test "HasLength::is_empty via generic constraint" {
-  let empty : @rle.Rle[String] = @rle.Rle::new()
+  let empty : @rle.Rle[String] = @rle.Rle::Rle()
   let nonempty = @rle.Rle::from_string("hi")
   inspect(check_empty(empty), content="true")
   inspect(check_empty(nonempty), content="false")
@@ -924,7 +939,7 @@ test "Rle::from_sorted_ints dense run collapses (index-free)" {
 
 ///|
 test "Rle::each_with_position on empty" {
-  let rle : @rle.Rle[String] = @rle.Rle::new()
+  let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let positions : Array[(String, Int, Int)] = []
   rle.each_with_position(fn(run, start, end) {
     positions.push((run, start, end))

@@ -82,7 +82,7 @@ test "prefix_sums internal structure" {
 
 ///|
 test "Rle cache invalidation" {
-  let rle : Rle[String] = Rle::new()
+  let rle : Rle[String] = Rle::Rle()
   let _ = rle.append("hello")
   // Access to trigger cache build
   let _ = rle.span()

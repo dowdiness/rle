@@ -41,9 +41,9 @@ pub impl Show for ErrorMessage
 pub(all) struct PrefixSums {
   spans : Array[Int]
   content : Array[Int]
-
-  fn new() -> PrefixSums
 } derive(Eq, @debug.Debug)
+pub fn PrefixSums::PrefixSums() -> Self
+#deprecated
 pub fn PrefixSums::new() -> Self
 pub fn PrefixSums::span_at(Self, Int) -> Int?
 pub fn PrefixSums::span_before(Self, Int) -> Int
@@ -65,9 +65,8 @@ pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums?
   mut version : Int
-
-  fn[T] new() -> Rle[T]
 } derive(Eq, @debug.Debug)
+pub fn[T] Rle::Rle() -> Self[T]
 pub fn[T : Mergeable + Spanning] Rle::append(Self[T], T) -> Result[Unit, RleError]
 pub fn[T] Rle::clear(Self[T]) -> Unit
 pub fn[T : Mergeable + Spanning] Rle::concat(Self[T], Self[T]) -> Self[T]
@@ -86,6 +85,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(Self[T], Int, Self[T]) 
 pub fn[T] Rle::iter(Self[T]) -> Iter[T]
 pub fn Rle::iter_chars(Self[String]) -> Iter[Char]
 pub fn[T : Addressable + Spanning] Rle::iter_units(Self[T]) -> Iter[Int]
+#deprecated
 pub fn[T] Rle::new() -> Self[T]
 pub fn[T : Spanning] Rle::range(Self[T], start~ : Int, end~ : Int) -> Result[Iter[Slice[T]], RleError]
 pub fn[T : Spanning] Rle::range_clamped(Self[T], start~ : Int, end~ : Int) -> Iter[Slice[T]]
@@ -144,8 +144,6 @@ pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(Array[Int]) 
 pub fn Runs::from_string(String) -> Self[String]
 #alias("_[_]")
 pub fn[T] Runs::get(Self[T], Int) -> T?
-#deprecated
-pub fn[T] Runs::inner(Self[T]) -> Array[T]
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::insert(Self[T], Int, Self[T]) -> Result[Self[T], RleError]
 pub fn[T] Runs::iter(Self[T]) -> Iter[T]
 pub fn Runs::iter_chars(Self[String]) -> Iter[Char]

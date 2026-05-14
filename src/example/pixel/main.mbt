@@ -9,11 +9,6 @@ struct PixelRun {
 } derive(Debug, Eq)
 
 ///|
-impl Show for PixelRun with output(self, logger) {
-  logger.write_string(@debug.to_string(self))
-}
-
-///|
 impl @rle.Mergeable for PixelRun with can_merge(a : PixelRun, b : PixelRun) -> Bool {
   a.color == b.color
 }
@@ -50,16 +45,45 @@ fn pixel(color : Int, count : Int) -> PixelRun {
 }
 
 ///|
+fn print_pixel(run : PixelRun) -> Unit {
+  println("{color: \{run.color}, count: \{run.count}}")
+}
+
+///|
+fn print_pixel_opt(run : PixelRun?) -> Unit {
+  match run {
+    Some(run) => println("Some({color: \{run.color}, count: \{run.count}})")
+    None => println("None")
+  }
+}
+
+///|
+fn print_run_pos(pos : @rle.RunPos?) -> Unit {
+  match pos {
+    Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
+    None => println("None")
+  }
+}
+
+///|
+fn print_position(position : Int?) -> Unit {
+  match position {
+    Some(position) => println("Some(\{position})")
+    None => println("None")
+  }
+}
+
+///|
 fn main {
   println("=== Same-Color Merge ===")
-  let rle : @rle.Rle[PixelRun] = @rle.Rle::new()
+  let rle : @rle.Rle[PixelRun] = @rle.Rle::Rle()
   rle.append(pixel(red, 10)) |> println //=> Ok(())
   rle.append(pixel(red, 5)) |> println //=> Ok(())
   rle.length() |> println //=> 1  (merged)
-  rle.get(0) |> println //=> Some({color: 16711680, count: 15})
+  print_pixel_opt(rle.get(0)) //=> Some({color: 16711680, count: 15})
 
   println("\n=== Multi-Color Scanline ===")
-  let rle2 : @rle.Rle[PixelRun] = @rle.Rle::new()
+  let rle2 : @rle.Rle[PixelRun] = @rle.Rle::Rle()
   rle2.append(pixel(red, 10)) |> println
   rle2.append(pixel(green, 20)) |> println
   rle2.append(pixel(blue, 30)) |> println
@@ -68,13 +92,13 @@ fn main {
 
   println("\n=== Find Run at Position ===")
   // red: 0-9, green: 10-29, blue: 30-59
-  rle2.find(0) |> println //=> Some({run: 0, offset: 0})
-  rle2.find(25) |> println //=> Some({run: 1, offset: 15})
-  rle2.find(59) |> println //=> Some({run: 2, offset: 29})
+  print_run_pos(rle2.find(0)) //=> Some({run: 0, offset: 0})
+  print_run_pos(rle2.find(25)) //=> Some({run: 1, offset: 15})
+  print_run_pos(rle2.find(59)) //=> Some({run: 2, offset: 29})
 
   println("\n=== Value At Position ===")
   match rle2.value_at(25) {
-    Ok(run) => run |> println //=> {color: 65280, count: 20}  (green)
+    Ok(run) => print_pixel(run) //=> {color: 65280, count: 20}  (green)
     Err(e) => e |> println
   }
 
@@ -94,16 +118,16 @@ fn main {
   ]
   let rle3 = @rle.Rle::from_array(pixels)
   rle3.length() |> println //=> 3  (red=8, green=20, blue=1)
-  rle3.get(0) |> println //=> Some({color: 16711680, count: 8})
-  rle3.get(1) |> println //=> Some({color: 65280,    count: 20})
-  rle3.get(2) |> println //=> Some({color: 255,      count: 1})
+  print_pixel_opt(rle3.get(0)) //=> Some({color: 16711680, count: 8})
+  print_pixel_opt(rle3.get(1)) //=> Some({color: 65280,    count: 20})
+  print_pixel_opt(rle3.get(2)) //=> Some({color: 255,      count: 1})
 
   println("\n=== Cursor ===")
-  let rle4 : @rle.Rle[PixelRun] = @rle.Rle::new()
+  let rle4 : @rle.Rle[PixelRun] = @rle.Rle::Rle()
   rle4.append(pixel(red, 10)) |> println
   rle4.append(pixel(green, 20)) |> println
   let cursor = rle4.cursor()
   cursor.advance(10) |> println //=> true  (moved past red)
-  cursor.position() |> println //=> Some(10)
-  cursor.current_item() |> println //=> Some({color: 65280, count: 20})  (green)
+  print_position(cursor.position()) //=> Some(10)
+  print_pixel_opt(cursor.current_item()) //=> Some({color: 65280, count: 20})  (green)
 }

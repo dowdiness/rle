@@ -22,10 +22,13 @@ let rle = @rle.Rle::from_string("hello world")
 
 // Length and lookup
 rle.span() |> println   //=> 11
-rle.find(6) |> println  //=> Some({run: 0, offset: 6})
+match rle.find(6) {
+  Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
+  None => println("None")
+}
 
 // Append merges automatically (strings always merge)
-let rle = @rle.Rle::new()
+let rle = @rle.Rle::Rle()
 rle.append("hello") |> println   // Ok(())
 rle.append(" world") |> println  // Ok(()) — merged into one run
 rle.length() |> println          //=> 1
@@ -89,17 +92,29 @@ let rle = @rle.Rle::from_string("abcdef")
 let cursor = rle.cursor()
 
 cursor.advance(3)          //=> true
-cursor.position()          //=> Some(3)
-cursor.current_item()      //=> Some("abcdef")
+match cursor.position() {
+  Some(position) => println("Some(\{position})")
+  None => println("None")
+}
+match cursor.current_item() {
+  Some(item) => println("Some(\"\{item}\")")
+  None => println("None")
+}
 
 // seek() uses binary search — O(log n)
 cursor.seek(1)             //=> true
-cursor.position()          //=> Some(1)
+match cursor.position() {
+  Some(position) => println("Some(\{position})")
+  None => println("None")
+}
 
 // Mutation invalidates the cursor
 rle.append("ghi")
 cursor.is_stale()          //=> true
-cursor.next()              //=> None (stale cursors refuse to operate)
+match cursor.next() {
+  Some(item) => println("Some(\"\{item}\")")
+  None => println("None")
+}
 ```
 
 After a mutation, create a new cursor to continue traversal.
@@ -252,7 +267,7 @@ For most users, **use `Rle[T]`**. Use `Runs[T]` directly only if you need fine-g
 
 | Method | Complexity | Description |
 |--------|-----------|-------------|
-| `Rle::new()` | O(1) | Empty RLE sequence |
+| `Rle::Rle()` | O(1) | Empty RLE sequence |
 | `Rle::from_array(arr)` | O(n) | Batch construct with merging |
 | `Rle::from_string(s)` | O(1) | Create from string |
 | `span()` | O(1)* | Total span length |
