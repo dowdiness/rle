@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-06-01
+
+### Changed
+- Bumped `moonbitlang/quickcheck` dependency from 0.11.2 to 0.14.0. This clears 13 `[0020]` "Use Debug instead of Show" deprecation warnings in the QuickCheck property-test path under the 0.1.20260522 toolchain (the property tests whose generated inputs relied on deprecated container `Show` impls). No source or public API changes; all 223 tests continue to pass.
+
 ## [0.2.1] - 2026-05-14
 
 ### Added
