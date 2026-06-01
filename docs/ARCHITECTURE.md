@@ -195,6 +195,6 @@ These produce new `Runs`/`Rle` values (functional style). The original is not mo
 
 ## Dependencies
 
-- `moonbitlang/quickcheck` (0.9.9) — property-based testing
+- `moonbitlang/quickcheck` (0.14.0) — property-based testing
 - `moonbitlang/core/bench` — benchmark harness
 - `moonbitlang/core/quickcheck` — core QuickCheck integration
