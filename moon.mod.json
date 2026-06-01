@@ -3,7 +3,7 @@
   "version": "0.2.1",
   "source": "src",
   "deps": {
-    "moonbitlang/quickcheck": "0.11.2"
+    "moonbitlang/quickcheck": "0.14.0"
   },
   "readme": "README.md",
   "repository": "https://github.com/dowdiness/rle",
