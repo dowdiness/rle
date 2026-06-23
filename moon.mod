@@ -1,6 +1,6 @@
 name = "dowdiness/rle"
 
-version = "0.2.2"
+version = "0.2.3"
 
 import {
   "moonbitlang/quickcheck@0.14.0",
