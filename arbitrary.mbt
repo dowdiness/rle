@@ -2,7 +2,7 @@
 
 ///|
 /// Arbitrary instance for Runs[String] - generates random run-length encoded strings
-pub impl @quickcheck.Arbitrary for Runs[String] with arbitrary(
+pub impl @quickcheck.Arbitrary for Runs[String] with fn arbitrary(
   size,
   random_state,
 ) {
@@ -38,7 +38,7 @@ pub impl @quickcheck.Arbitrary for Runs[String] with arbitrary(
 /// 1. Remove runs (fewer runs = simpler)
 /// 2. Shorten individual runs
 /// 3. Simplify characters (later chars -> earlier chars)
-pub impl @qc.Shrink for Runs[String] with shrink(runs) {
+pub impl @qc.Shrink for Runs[String] with fn shrink(runs) {
   let results : Array[Runs[String]] = []
   let items = runs.to_array()
   let len = items.length()
@@ -101,7 +101,7 @@ pub impl @qc.Shrink for Runs[String] with shrink(runs) {
 
 ///|
 /// Arbitrary instance for Rle[String] - generates random cached RLE strings
-pub impl @quickcheck.Arbitrary for Rle[String] with arbitrary(
+pub impl @quickcheck.Arbitrary for Rle[String] with fn arbitrary(
   size,
   random_state,
 ) {
@@ -111,13 +111,13 @@ pub impl @quickcheck.Arbitrary for Rle[String] with arbitrary(
 
 ///|
 /// Shrink instance for Rle[String] - delegates to Runs shrinking
-pub impl @qc.Shrink for Rle[String] with shrink(rle) {
+pub impl @qc.Shrink for Rle[String] with fn shrink(rle) {
   @qc.Shrink::shrink(rle.to_runs()).map(Rle::from_runs)
 }
 
 ///|
 /// Arbitrary instance for RunPos - generates valid run positions
-pub impl @quickcheck.Arbitrary for RunPos with arbitrary(size, random_state) {
+pub impl @quickcheck.Arbitrary for RunPos with fn arbitrary(size, random_state) {
   let run = random_state.split().next_uint64().to_int().abs() % (size + 1)
   let offset = random_state.split().next_uint64().to_int().abs() % (size + 1)
   { run, offset }
@@ -125,7 +125,7 @@ pub impl @quickcheck.Arbitrary for RunPos with arbitrary(size, random_state) {
 
 ///|
 /// Shrink instance for RunPos - shrinks both run and offset toward 0
-pub impl @qc.Shrink for RunPos with shrink(pos) {
+pub impl @qc.Shrink for RunPos with fn shrink(pos) {
   let results : Array[RunPos] = []
   // Try (0, 0)
   if pos.run > 0 || pos.offset > 0 {
@@ -146,7 +146,10 @@ pub impl @qc.Shrink for RunPos with shrink(pos) {
 
 ///|
 /// Arbitrary instance for PrefixSums - generates valid prefix sum arrays
-pub impl @quickcheck.Arbitrary for PrefixSums with arbitrary(size, random_state) {
+pub impl @quickcheck.Arbitrary for PrefixSums with fn arbitrary(
+  size,
+  random_state,
+) {
   let num_runs = random_state.split().next_uint64().to_int().abs() % (size + 1) +
     1
   let spans : Array[Int] = []
@@ -165,7 +168,7 @@ pub impl @quickcheck.Arbitrary for PrefixSums with arbitrary(size, random_state)
 
 ///|
 /// Shrink instance for PrefixSums - shrinks by removing entries
-pub impl @qc.Shrink for PrefixSums with shrink(sums) {
+pub impl @qc.Shrink for PrefixSums with fn shrink(sums) {
   let results : Array[PrefixSums] = []
   let len = sums.spans.length()
   // Try empty
@@ -192,7 +195,7 @@ pub impl @qc.Shrink for PrefixSums with shrink(sums) {
 
 ///|
 /// Arbitrary instance for Slice[String] - generates valid string slices
-pub impl @quickcheck.Arbitrary for Slice[String] with arbitrary(
+pub impl @quickcheck.Arbitrary for Slice[String] with fn arbitrary(
   size,
   random_state,
 ) {
@@ -215,7 +218,7 @@ pub impl @quickcheck.Arbitrary for Slice[String] with arbitrary(
 
 ///|
 /// Shrink instance for Slice[String] - shrinks value and narrows range
-pub impl @qc.Shrink for Slice[String] with shrink(slice) {
+pub impl @qc.Shrink for Slice[String] with fn shrink(slice) {
   let results : Array[Slice[String]] = []
   let value_len = Spanning::span(slice.value)
   // Shrink to smaller range

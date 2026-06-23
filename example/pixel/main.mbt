@@ -9,24 +9,24 @@ struct PixelRun {
 } derive(Debug, Eq)
 
 ///|
-impl @rle.Mergeable for PixelRun with can_merge(a : PixelRun, b : PixelRun) -> Bool {
+impl @rle.Mergeable for PixelRun with fn can_merge(a : PixelRun, b : PixelRun) -> Bool {
   a.color == b.color
 }
 
 ///|
-impl @rle.Mergeable for PixelRun with merge(a : PixelRun, b : PixelRun) -> PixelRun {
+impl @rle.Mergeable for PixelRun with fn merge(a : PixelRun, b : PixelRun) -> PixelRun {
   { color: a.color, count: a.count + b.count }
 }
 
 ///|
-impl @rle.HasLength for PixelRun with length(self : PixelRun) -> Int {
+impl @rle.HasLength for PixelRun with fn length(self : PixelRun) -> Int {
   self.count
 }
 
 ///|
 /// span() delegates to length() here — both return pixel count.
 /// Override span() only when it should differ from length (e.g., CRDT tombstones).
-impl @rle.Spanning for PixelRun with span(self : PixelRun) -> Int {
+impl @rle.Spanning for PixelRun with fn span(self : PixelRun) -> Int {
   self.count
 }
 
@@ -77,16 +77,16 @@ fn print_position(position : Int?) -> Unit {
 fn main {
   println("=== Same-Color Merge ===")
   let rle : @rle.Rle[PixelRun] = @rle.Rle::Rle()
-  rle.append(pixel(red, 10)) |> println //=> Ok(())
-  rle.append(pixel(red, 5)) |> println //=> Ok(())
+  rle.append(pixel(red, 10)) |> @debug.debug //=> Ok(())
+  rle.append(pixel(red, 5)) |> @debug.debug //=> Ok(())
   rle.length() |> println //=> 1  (merged)
   print_pixel_opt(rle.get(0)) //=> Some({color: 16711680, count: 15})
 
   println("\n=== Multi-Color Scanline ===")
   let rle2 : @rle.Rle[PixelRun] = @rle.Rle::Rle()
-  rle2.append(pixel(red, 10)) |> println
-  rle2.append(pixel(green, 20)) |> println
-  rle2.append(pixel(blue, 30)) |> println
+  rle2.append(pixel(red, 10)) |> @debug.debug
+  rle2.append(pixel(green, 20)) |> @debug.debug
+  rle2.append(pixel(blue, 30)) |> @debug.debug
   rle2.length() |> println //=> 3
   rle2.span() |> println //=> 60  (10+20+30)
 
@@ -99,7 +99,7 @@ fn main {
   println("\n=== Value At Position ===")
   match rle2.value_at(25) {
     Ok(run) => print_pixel(run) //=> {color: 65280, count: 20}  (green)
-    Err(e) => e |> println
+    Err(e) => e |> @debug.debug
   }
 
   println("\n=== Iter All Runs ===")
@@ -124,8 +124,8 @@ fn main {
 
   println("\n=== Cursor ===")
   let rle4 : @rle.Rle[PixelRun] = @rle.Rle::Rle()
-  rle4.append(pixel(red, 10)) |> println
-  rle4.append(pixel(green, 20)) |> println
+  rle4.append(pixel(red, 10)) |> @debug.debug
+  rle4.append(pixel(green, 20)) |> @debug.debug
   let cursor = rle4.cursor()
   cursor.advance(10) |> println //=> true  (moved past red)
   print_position(cursor.position()) //=> Some(10)

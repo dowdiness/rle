@@ -12,8 +12,8 @@ fn main {
 
   // Append merges automatically (strings always merge)
   let rle = @rle.Rle::Rle()
-  rle.append("hello") |> println // Ok(())
-  rle.append(" world") |> println // Ok(()) — merged into one run
+  rle.append("hello") |> @debug.debug // Ok(())
+  rle.append(" world") |> @debug.debug // Ok(()) — merged into one run
   rle.length() |> println //=> 1
   rle.to_string() |> println //=> "hello world"
 
@@ -54,11 +54,11 @@ fn cursor() -> Unit {
   }
 
   // Mutation invalidates the cursor
-  rle.append("ghi") |> println
+  rle.append("ghi") |> @debug.debug
   cursor.is_stale() |> println //=> true
   match cursor.next() {
     Some(item) => println("Some(\"\{item}\")")
     None => println("None")
   }
-  println(rle)
+  @debug.debug(rle)
 }

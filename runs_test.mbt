@@ -34,7 +34,7 @@ test "Runs::append merges adjacent runs" {
 test "Runs::append rejects empty element" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   let result = runs.append("")
-  inspect(result, content="Err(Internal(EmptyElement))")
+  @debug.debug_inspect(result, content="Err(Internal(EmptyElement))")
 }
 
 ///|
@@ -299,8 +299,8 @@ test "Runs slice with surrogate pairs uses code unit indices" {
 test "Runs::prefix_sums builds correct sums" {
   let runs = @rle.Runs::from_string("hello")
   let sums = runs.prefix_sums()
-  inspect(sums.spans, content="[5]")
-  inspect(sums.content, content="[5]")
+  @debug.debug_inspect(sums.spans, content="[5]")
+  @debug.debug_inspect(sums.content, content="[5]")
 }
 
 ///|

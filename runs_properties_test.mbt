@@ -381,32 +381,32 @@ priv struct PropRange {
 }
 
 ///|
-impl @rle.FromRange for PropRange with from_range(start, count) {
+impl @rle.FromRange for PropRange with fn from_range(start, count) {
   { start, count }
 }
 
 ///|
-impl @rle.Addressable for PropRange with address(self, _global_start, offset) {
+impl @rle.Addressable for PropRange with fn address(self, _global_start, offset) {
   self.start + offset
 }
 
 ///|
-impl @rle.HasLength for PropRange with length(self) {
+impl @rle.HasLength for PropRange with fn length(self) {
   self.count
 }
 
 ///|
-impl @rle.Spanning for PropRange with span(self) {
+impl @rle.Spanning for PropRange with fn span(self) {
   self.count
 }
 
 ///|
-impl @rle.Mergeable for PropRange with can_merge(a, b) {
+impl @rle.Mergeable for PropRange with fn can_merge(a, b) {
   a.start + a.count == b.start
 }
 
 ///|
-impl @rle.Mergeable for PropRange with merge(a, b) {
+impl @rle.Mergeable for PropRange with fn merge(a, b) {
   { start: a.start, count: a.count + b.count }
 }
 
@@ -549,5 +549,5 @@ test "property: cursor advance and retreat match seek" {
 test "safety corpus covers boundary inputs" {
   let cases = ["", "a", "ab", "hello world", "😀", "a😀b", "    "]
   let lengths = cases.map(fn(text) { @rle.Spanning::span(text) })
-  inspect(lengths, content="[0, 1, 2, 11, 2, 4, 4]")
+  @debug.debug_inspect(lengths, content="[0, 1, 2, 11, 2, 4, 4]")
 }

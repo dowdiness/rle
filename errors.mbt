@@ -8,7 +8,7 @@ pub(all) suberror InternalError {
 } derive(Debug)
 
 ///|
-pub impl Show for InternalError with output(self, logger) {
+pub impl Show for InternalError with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -25,7 +25,7 @@ pub(all) suberror SliceError {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for SliceError with output(self, logger) {
+pub impl Show for SliceError with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -39,7 +39,7 @@ pub enum RangeIssue {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for RangeIssue with output(self, logger) {
+pub impl Show for RangeIssue with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -54,7 +54,7 @@ pub(all) suberror RleError {
 } derive(Debug)
 
 ///|
-pub impl Show for RleError with output(self, logger) {
+pub impl Show for RleError with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -74,7 +74,7 @@ pub fn RleError::message(self : RleError) -> ErrorMessage {
 
 ///|
 /// Display user-friendly error message
-pub impl Show for ErrorMessage with output(self, logger) {
+pub impl Show for ErrorMessage with fn output(self, logger) {
   match self.error {
     PositionOutOfBounds(position~, length~) =>
       logger.write_string(
