@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-06-23
+
+### Changed
+- Migrated from `moon.mod.json` to `moon.mod` and restructured `src/` packages to module root.
+
+### Fixed
+- Replaced deprecated `println`/`inspect` calls with `@debug.debug`/`@debug.debug_inspect`, silencing all compiler warnings in the rle package.
+
 ## [0.2.2] - 2026-06-01
 
 ### Changed

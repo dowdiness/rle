@@ -356,20 +356,20 @@ moon bench --release
 
 ## Examples
 
-The `src/example/` directory contains runnable demos:
+The `example/` directory contains runnable demos:
 
-- **`src/example/`** — Basic string operations, cursor usage
-- **`src/example/string/`** — String-specific operations (find, split, range, cursor staleness)
-- **`src/example/pixel/`** — Custom `PixelRun` type (numeric, no Sliceable)
-- **`src/example/authored/`** — Custom `AuthoredRun` type (with Sliceable, demonstrates selective merging)
+- **`example/`** — Basic string operations, cursor usage
+- **`example/string/`** — String-specific operations (find, split, range, cursor staleness)
+- **`example/pixel/`** — Custom `PixelRun` type (numeric, no Sliceable)
+- **`example/authored/`** — Custom `AuthoredRun` type (with Sliceable, demonstrates selective merging)
 
 Run any example with:
 
 ```bash
-moon run src/example           # Basic demo
-moon run src/example/pixel     # PixelRun demo
-moon run src/example/authored  # AuthoredRun demo
-moon run src/example/string    # String demo
+moon run example           # Basic demo
+moon run example/pixel     # PixelRun demo
+moon run example/authored  # AuthoredRun demo
+moon run example/string    # String demo
 ```
 
 ## License
