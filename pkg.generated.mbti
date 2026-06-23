@@ -4,7 +4,9 @@ package "dowdiness/rle"
 import {
   "moonbitlang/core/builtin",
   "moonbitlang/core/debug",
+  "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/splitmix",
+  "moonbitlang/quickcheck/shrink",
 }
 
 // Values
@@ -50,8 +52,8 @@ pub fn PrefixSums::span_before(Self, Int) -> Int
 pub impl HasLength for PrefixSums
 pub impl Spanning for PrefixSums
 pub impl Show for PrefixSums
-pub impl @moonbitlang/core/quickcheck.Arbitrary for PrefixSums
-pub impl @moonbitlang/quickcheck.Shrink for PrefixSums
+pub impl @quickcheck.Arbitrary for PrefixSums
+pub impl @shrink.Shrink for PrefixSums
 
 pub enum RangeIssue {
   NegativeStart
@@ -97,8 +99,8 @@ pub fn[T : Spanning] Rle::value_at(Self[T], Int) -> Result[T, RleError]
 pub impl[T] HasLength for Rle[T]
 pub impl[T : Spanning] Spanning for Rle[T]
 pub impl[T : @debug.Debug] Show for Rle[T]
-pub impl @moonbitlang/core/quickcheck.Arbitrary for Rle[String]
-pub impl @moonbitlang/quickcheck.Shrink for Rle[String]
+pub impl @quickcheck.Arbitrary for Rle[String]
+pub impl @shrink.Shrink for Rle[String]
 
 pub struct RleCursor[T] {
   rle : Rle[T]
@@ -127,8 +129,8 @@ pub(all) struct RunPos {
   offset : Int
 } derive(Eq, @debug.Debug)
 pub impl Show for RunPos
-pub impl @moonbitlang/core/quickcheck.Arbitrary for RunPos
-pub impl @moonbitlang/quickcheck.Shrink for RunPos
+pub impl @quickcheck.Arbitrary for RunPos
+pub impl @shrink.Shrink for RunPos
 
 pub struct Runs[T](Array[T]) derive(Eq, @debug.Debug)
 pub fn[T : Mergeable + Spanning] Runs::append(Self[T], T) -> Result[Unit, RleError]
@@ -159,8 +161,8 @@ pub fn[T : Spanning] Runs::value_at(Self[T], Int) -> Result[T, RleError]
 pub impl[T] HasLength for Runs[T]
 pub impl[T : Spanning] Spanning for Runs[T]
 pub impl[T : @debug.Debug] Show for Runs[T]
-pub impl @moonbitlang/core/quickcheck.Arbitrary for Runs[String]
-pub impl @moonbitlang/quickcheck.Shrink for Runs[String]
+pub impl @quickcheck.Arbitrary for Runs[String]
+pub impl @shrink.Shrink for Runs[String]
 
 pub struct Slice[T] {
   value : T
@@ -169,41 +171,41 @@ pub struct Slice[T] {
 } derive(Eq, @debug.Debug)
 pub fn[T : Sliceable] Slice::to_inner(Self[T]) -> Result[T, RleError]
 pub impl[T : @debug.Debug] Show for Slice[T]
-pub impl @moonbitlang/core/quickcheck.Arbitrary for Slice[String]
-pub impl @moonbitlang/quickcheck.Shrink for Slice[String]
+pub impl @quickcheck.Arbitrary for Slice[String]
+pub impl @shrink.Shrink for Slice[String]
 
 // Type aliases
 pub using @builtin {type Option as MayStale}
 
 // Traits
 pub(open) trait Addressable {
-  address(Self, Int, Int) -> Int
+  fn address(Self, Int, Int) -> Int
 }
 
 pub(open) trait FromRange {
-  from_range(Int, Int) -> Self
+  fn from_range(Int, Int) -> Self
 }
 
 pub(open) trait HasLength {
-  length(Self) -> Int
-  is_empty(Self) -> Bool = _
+  fn length(Self) -> Int
+  fn is_empty(Self) -> Bool = _
 }
 pub impl HasLength for String
 
 pub(open) trait Mergeable {
-  can_merge(Self, Self) -> Bool
-  merge(Self, Self) -> Self
+  fn can_merge(Self, Self) -> Bool
+  fn merge(Self, Self) -> Self
 }
 pub impl Mergeable for String
 
 pub(open) trait Sliceable {
-  slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
+  fn slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
 }
 pub impl Sliceable for String
 
 pub(open) trait Spanning : HasLength {
-  span(Self) -> Int = _
-  logical_length(Self) -> Int = _
+  fn span(Self) -> Int = _
+  fn logical_length(Self) -> Int = _
 }
 pub impl Spanning for String
 

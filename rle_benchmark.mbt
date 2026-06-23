@@ -12,22 +12,22 @@ priv struct BenchRun {
 }
 
 ///|
-impl HasLength for BenchRun with length(self : BenchRun) -> Int {
+impl HasLength for BenchRun with fn length(self : BenchRun) -> Int {
   self.len
 }
 
 ///|
-impl Spanning for BenchRun with span(self : BenchRun) -> Int {
+impl Spanning for BenchRun with fn span(self : BenchRun) -> Int {
   self.len
 }
 
 ///|
-impl Mergeable for BenchRun with can_merge(_a : BenchRun, _b : BenchRun) -> Bool {
+impl Mergeable for BenchRun with fn can_merge(_a : BenchRun, _b : BenchRun) -> Bool {
   false
 }
 
 ///|
-impl Mergeable for BenchRun with merge(a : BenchRun, _b : BenchRun) -> BenchRun {
+impl Mergeable for BenchRun with fn merge(a : BenchRun, _b : BenchRun) -> BenchRun {
   a // unreachable since can_merge is false
 }
 

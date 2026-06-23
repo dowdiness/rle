@@ -12,10 +12,6 @@ repository = "https://github.com/dowdiness/rle"
 
 license = "Apache-2.0"
 
-keywords = [
-  "rle",
-  "run-length-encoding",
-  "data-structure",
-]
+keywords = [ "rle", "run-length-encoding", "data-structure" ]
 
 description = "Generic run-length encoded sequence with O(log n) position lookup"

@@ -27,8 +27,8 @@
 /// - Authored text: `can_merge` checks `a.author == b.author`.
 /// - Pixel runs: `can_merge` checks `a.color == b.color`; `merge` sums counts.
 pub(open) trait Mergeable {
-  can_merge(Self, Self) -> Bool
-  merge(Self, Self) -> Self
+  fn can_merge(Self, Self) -> Bool
+  fn merge(Self, Self) -> Self
 }
 
 ///|
@@ -51,7 +51,7 @@ pub(open) trait Mergeable {
 /// index inside a surrogate pair returns `Err(InvalidSlice(InvalidIndex))`.
 /// Always slice on valid character boundaries.
 pub(open) trait Sliceable {
-  slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
+  fn slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
 }
 
 ///|
@@ -60,15 +60,15 @@ pub(open) trait Sliceable {
 ///
 /// Provides `is_empty()` with a default implementation (`length() == 0`).
 pub(open) trait HasLength {
-  length(Self) -> Int
+  fn length(Self) -> Int
 
   /// Returns true if length is zero
-  is_empty(Self) -> Bool = _
+  fn is_empty(Self) -> Bool = _
 }
 
 ///|
 /// Default is_empty delegates to length.
-impl HasLength with is_empty(self) {
+impl HasLength with fn is_empty(self) {
   self.length() == 0
 }
 
@@ -105,19 +105,19 @@ impl HasLength with is_empty(self) {
 /// For strings, this is UTF-16 code units. For pixel runs, pixel count.
 /// Choose units that match your indexing needs.
 pub(open) trait Spanning: HasLength {
-  span(Self) -> Int = _
-  logical_length(Self) -> Int = _
+  fn span(Self) -> Int = _
+  fn logical_length(Self) -> Int = _
 }
 
 ///|
 /// Default span delegates to plain length.
-impl Spanning with span(self) {
+impl Spanning with fn span(self) {
   HasLength::length(self)
 }
 
 ///|
 /// Default logical_length delegates to span.
-impl Spanning with logical_length(self) {
+impl Spanning with fn logical_length(self) {
   self.span()
 }
 
@@ -149,7 +149,7 @@ impl Spanning with logical_length(self) {
 /// knowing the element type, `FromRange` lets the library compress sorted
 /// integers without knowing your run type.
 pub(open) trait FromRange {
-  from_range(start : Int, count : Int) -> Self
+  fn from_range(start : Int, count : Int) -> Self
 }
 
 ///|
@@ -180,5 +180,5 @@ pub(open) trait FromRange {
 /// Both approaches produce correct results. The library doesn't know or care
 /// which one your type uses — it just calls `address` and gets an `Int` back.
 pub(open) trait Addressable {
-  address(Self, global_start : Int, offset : Int) -> Int
+  fn address(Self, global_start : Int, offset : Int) -> Int
 }

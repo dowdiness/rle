@@ -6,6 +6,6 @@ pub(all) struct RunPos {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for RunPos with output(self, logger) {
+pub impl Show for RunPos with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }

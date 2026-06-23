@@ -3,7 +3,7 @@
 pub struct Runs[T](Array[T]) derive(Debug, Eq)
 
 ///|
-pub impl[T : Debug] Show for Runs[T] with output(self, logger) {
+pub impl[T : Debug] Show for Runs[T] with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -137,13 +137,13 @@ pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(
 
 ///|
 /// HasLength impl — number of runs
-pub impl[T] HasLength for Runs[T] with length(self : Runs[T]) -> Int {
+pub impl[T] HasLength for Runs[T] with fn length(self : Runs[T]) -> Int {
   self.0.length()
 }
 
 ///|
 /// HasLength impl — is_empty (overrides default for direct Array check)
-pub impl[T] HasLength for Runs[T] with is_empty(self : Runs[T]) -> Bool {
+pub impl[T] HasLength for Runs[T] with fn is_empty(self : Runs[T]) -> Bool {
   self.0.is_empty()
 }
 
@@ -172,13 +172,15 @@ pub fn[T] Runs::to_array(self : Runs[T]) -> Array[T] {
 
 ///|
 /// Spanning impl — total span, O(n)
-pub impl[T : Spanning] Spanning for Runs[T] with span(self : Runs[T]) -> Int {
+pub impl[T : Spanning] Spanning for Runs[T] with fn span(self : Runs[T]) -> Int {
   self.0.fold(init=0, fn(acc, item) { acc + T::span(item) })
 }
 
 ///|
 /// Spanning impl — total logical length, O(n)
-pub impl[T : Spanning] Spanning for Runs[T] with logical_length(self : Runs[T]) -> Int {
+pub impl[T : Spanning] Spanning for Runs[T] with fn logical_length(
+  self : Runs[T],
+) -> Int {
   self.0.fold(init=0, fn(acc, item) { acc + T::logical_length(item) })
 }
 

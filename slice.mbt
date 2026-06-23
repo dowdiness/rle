@@ -15,7 +15,7 @@ pub struct Slice[T] {
 } derive(Debug, Eq)
 
 ///|
-pub impl[T : Debug] Show for Slice[T] with output(self, logger) {
+pub impl[T : Debug] Show for Slice[T] with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
