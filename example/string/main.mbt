@@ -37,9 +37,9 @@ fn main {
 
   println("\n=== Append (auto-merge) ===")
   let rle2 : @rle.Rle[String] = @rle.Rle::Rle()
-  rle2.append("hello") |> println //=> Ok(())
-  rle2.append(", ") |> println //=> Ok(())
-  rle2.append("world") |> println //=> Ok(())
+  @debug.debug(rle2.append("hello")) //=> Ok(())
+  @debug.debug(rle2.append(", ")) //=> Ok(())
+  @debug.debug(rle2.append(" world")) //=> Ok(())
   rle2.length() |> println //=> 1  (all merged)
   rle2.to_string() |> println //=> hello, world
 
@@ -91,7 +91,7 @@ fn main {
   println("\n=== Cursor Staleness ===")
   let rle6 = @rle.Rle::from_string("hello")
   let cursor2 = rle6.cursor()
-  rle6.append(" world") |> println //=> Ok(())
+  @debug.debug(rle6.append(" world")) //=> Ok(())
   cursor2.is_stale() |> println //=> true
   print_string(cursor2.next()) //=> None  (stale)
 

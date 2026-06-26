@@ -17,7 +17,7 @@ pub(all) struct PrefixSums {
 } derive(Debug, Eq)
 
 ///|
-pub impl Show for PrefixSums with output(self, logger) {
+pub impl Show for PrefixSums with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -36,7 +36,7 @@ pub fn PrefixSums::new() -> PrefixSums {
 
 ///|
 /// Total span length - O(1)
-pub impl Spanning for PrefixSums with span(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with fn span(self : PrefixSums) -> Int {
   match self.spans.last() {
     Some(total) => total
     None => 0
@@ -45,7 +45,7 @@ pub impl Spanning for PrefixSums with span(self : PrefixSums) -> Int {
 
 ///|
 /// Total logical length - O(1)
-pub impl Spanning for PrefixSums with logical_length(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with fn logical_length(self : PrefixSums) -> Int {
   match self.content.last() {
     Some(total) => total
     None => 0
@@ -54,7 +54,7 @@ pub impl Spanning for PrefixSums with logical_length(self : PrefixSums) -> Int {
 
 ///|
 /// Number of runs
-pub impl HasLength for PrefixSums with length(self : PrefixSums) -> Int {
+pub impl HasLength for PrefixSums with fn length(self : PrefixSums) -> Int {
   self.spans.length()
 }
 

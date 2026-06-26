@@ -2,20 +2,20 @@
 
 ///|
 /// String implements Mergeable - strings always merge
-pub impl Mergeable for String with can_merge(_a : String, _b : String) -> Bool {
+pub impl Mergeable for String with fn can_merge(_a : String, _b : String) -> Bool {
   true
 }
 
 ///|
 /// Merge two strings by concatenation
-pub impl Mergeable for String with merge(a : String, b : String) -> String {
+pub impl Mergeable for String with fn merge(a : String, b : String) -> String {
   a + b
 }
 
 ///|
 /// String implements HasLength - length() is used by Spanning default
 /// logical_length() → span() → HasLength::length(), all returning UTF-16 code unit count
-pub impl HasLength for String with length(self : String) -> Int {
+pub impl HasLength for String with fn length(self : String) -> Int {
   self.length()
 }
 
@@ -23,7 +23,7 @@ pub impl HasLength for String with length(self : String) -> Int {
 /// String implements Spanning via defaults:
 /// span() → HasLength::length(), logical_length() → span()
 /// Both return UTF-16 code unit count.
-pub impl Spanning for String with span(self : String) -> Int {
+pub impl Spanning for String with fn span(self : String) -> Int {
   HasLength::length(self)
 }
 
@@ -68,7 +68,7 @@ pub fn slice_string_view(
 
 ///|
 /// String implements Sliceable via substring with UTF-16 boundary validation.
-pub impl Sliceable for String with slice(
+pub impl Sliceable for String with fn slice(
   self : String,
   start~ : Int,
   end~ : Int,

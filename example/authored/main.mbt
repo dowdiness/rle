@@ -8,7 +8,7 @@ struct AuthoredRun {
 } derive(Debug, Eq)
 
 ///|
-impl @rle.Mergeable for AuthoredRun with can_merge(
+impl @rle.Mergeable for AuthoredRun with fn can_merge(
   a : AuthoredRun,
   b : AuthoredRun,
 ) -> Bool {
@@ -16,24 +16,27 @@ impl @rle.Mergeable for AuthoredRun with can_merge(
 }
 
 ///|
-impl @rle.Mergeable for AuthoredRun with merge(a : AuthoredRun, b : AuthoredRun) -> AuthoredRun {
+impl @rle.Mergeable for AuthoredRun with fn merge(
+  a : AuthoredRun,
+  b : AuthoredRun,
+) -> AuthoredRun {
   { author: a.author, text: a.text + b.text }
 }
 
 ///|
-impl @rle.HasLength for AuthoredRun with length(self : AuthoredRun) -> Int {
+impl @rle.HasLength for AuthoredRun with fn length(self : AuthoredRun) -> Int {
   self.text.length()
 }
 
 ///|
-impl @rle.Spanning for AuthoredRun with span(self : AuthoredRun) -> Int {
+impl @rle.Spanning for AuthoredRun with fn span(self : AuthoredRun) -> Int {
   self.text.length()
 }
 
 ///|
 /// Sliceable via String's built-in Sliceable impl — validates bounds and
 /// surrogate pair boundaries automatically.
-impl @rle.Sliceable for AuthoredRun with slice(
+impl @rle.Sliceable for AuthoredRun with fn slice(
   self : AuthoredRun,
   start~ : Int,
   end~ : Int,
@@ -61,15 +64,15 @@ fn print_authored(run : AuthoredRun?) -> Unit {
 fn main {
   println("=== Same-Author Merge ===")
   let rle : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
-  rle.append(authored("alice", "Hello")) |> println //=> Ok(())
-  rle.append(authored("alice", ", world")) |> println //=> Ok(())
+  @debug.debug(rle.append(authored("alice", "Hello"))) //=> Ok(())
+  @debug.debug(rle.append(authored("alice", ", world"))) //=> Ok(())
   rle.length() |> println //=> 1  (merged)
   print_authored(rle.get(0)) //=> Some({author: "alice", text: "Hello, world"})
 
   println("\n=== Different-Author Separation ===")
   let rle2 : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
-  rle2.append(authored("alice", "Hello")) |> println
-  rle2.append(authored("bob", " world")) |> println
+  @debug.debug(rle2.append(authored("alice", "Hello"))) // Ok(())
+  @debug.debug(rle2.append(authored("bob", " world"))) // Ok(())
   rle2.length() |> println //=> 2  (kept separate)
   print_authored(rle2.get(0)) //=> Some({author: "alice", text: "Hello"})
   print_authored(rle2.get(1)) //=> Some({author: "bob",   text: " world"})

@@ -145,27 +145,27 @@ priv struct WbRange {
 }
 
 ///|
-impl FromRange for WbRange with from_range(start, count) {
+impl FromRange for WbRange with fn from_range(start, count) {
   { start, count }
 }
 
 ///|
-impl HasLength for WbRange with length(self) {
+impl HasLength for WbRange with fn length(self) {
   self.count
 }
 
 ///|
-impl Spanning for WbRange with span(self) {
+impl Spanning for WbRange with fn span(self) {
   self.count
 }
 
 ///|
-impl Mergeable for WbRange with can_merge(a, b) {
+impl Mergeable for WbRange with fn can_merge(a, b) {
   a.start + a.count == b.start
 }
 
 ///|
-impl Mergeable for WbRange with merge(a, b) {
+impl Mergeable for WbRange with fn merge(a, b) {
   { start: a.start, count: a.count + b.count }
 }
 

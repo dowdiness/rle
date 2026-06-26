@@ -32,7 +32,7 @@ pub struct Rle[T] {
 } derive(Debug, Eq)
 
 ///|
-pub impl[T : Debug] Show for Rle[T] with output(self, logger) {
+pub impl[T : Debug] Show for Rle[T] with fn output(self, logger) {
   logger.write_string(@debug.to_string(self))
 }
 
@@ -207,13 +207,13 @@ fn[T : Spanning] Rle::ensure_prefix(self : Rle[T]) -> PrefixSums {
 
 ///|
 /// HasLength impl — number of runs
-pub impl[T] HasLength for Rle[T] with length(self : Rle[T]) -> Int {
+pub impl[T] HasLength for Rle[T] with fn length(self : Rle[T]) -> Int {
   self.runs.length()
 }
 
 ///|
 /// HasLength impl — is_empty (overrides default to delegate to Runs::is_empty)
-pub impl[T] HasLength for Rle[T] with is_empty(self : Rle[T]) -> Bool {
+pub impl[T] HasLength for Rle[T] with fn is_empty(self : Rle[T]) -> Bool {
   self.runs.is_empty()
 }
 
@@ -231,13 +231,13 @@ pub fn[T] Rle::iter(self : Rle[T]) -> Iter[T] {
 
 ///|
 /// Spanning impl — total span, O(1) with cache
-pub impl[T : Spanning] Spanning for Rle[T] with span(self : Rle[T]) -> Int {
+pub impl[T : Spanning] Spanning for Rle[T] with fn span(self : Rle[T]) -> Int {
   self.ensure_prefix().span()
 }
 
 ///|
 /// Spanning impl — logical content length, O(1) with cache
-pub impl[T : Spanning] Spanning for Rle[T] with logical_length(self : Rle[T]) -> Int {
+pub impl[T : Spanning] Spanning for Rle[T] with fn logical_length(self : Rle[T]) -> Int {
   self.ensure_prefix().logical_length()
 }
 

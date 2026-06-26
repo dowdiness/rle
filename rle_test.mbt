@@ -34,7 +34,7 @@ test "Rle::append merges adjacent runs" {
 test "Rle::append rejects empty element" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
   let result = rle.append("")
-  inspect(result, content="Err(Internal(EmptyElement))")
+  debug_inspect(result, content="Err(Internal(EmptyElement))")
 }
 
 ///|
@@ -811,32 +811,32 @@ priv struct TestRange {
 }
 
 ///|
-impl @rle.FromRange for TestRange with from_range(start, count) {
+impl @rle.FromRange for TestRange with fn from_range(start, count) {
   { start, count }
 }
 
 ///|
-impl @rle.Addressable for TestRange with address(self, _global_start, offset) {
+impl @rle.Addressable for TestRange with fn address(self, _global_start, offset) {
   self.start + offset
 }
 
 ///|
-impl @rle.HasLength for TestRange with length(self) {
+impl @rle.HasLength for TestRange with fn length(self) {
   self.count
 }
 
 ///|
-impl @rle.Spanning for TestRange with span(self) {
+impl @rle.Spanning for TestRange with fn span(self) {
   self.count
 }
 
 ///|
-impl @rle.Mergeable for TestRange with can_merge(a, b) {
+impl @rle.Mergeable for TestRange with fn can_merge(a, b) {
   a.start + a.count == b.start
 }
 
 ///|
-impl @rle.Mergeable for TestRange with merge(a, b) {
+impl @rle.Mergeable for TestRange with fn merge(a, b) {
   { start: a.start, count: a.count + b.count }
 }
 
@@ -847,32 +847,36 @@ priv struct DenseTestRun {
 }
 
 ///|
-impl @rle.FromRange for DenseTestRun with from_range(_start, count) {
+impl @rle.FromRange for DenseTestRun with fn from_range(_start, count) {
   { count, }
 }
 
 ///|
-impl @rle.Addressable for DenseTestRun with address(_self, global_start, offset) {
+impl @rle.Addressable for DenseTestRun with fn address(
+  _self,
+  global_start,
+  offset,
+) {
   global_start + offset
 }
 
 ///|
-impl @rle.HasLength for DenseTestRun with length(self) {
+impl @rle.HasLength for DenseTestRun with fn length(self) {
   self.count
 }
 
 ///|
-impl @rle.Spanning for DenseTestRun with span(self) {
+impl @rle.Spanning for DenseTestRun with fn span(self) {
   self.count
 }
 
 ///|
-impl @rle.Mergeable for DenseTestRun with can_merge(_a, _b) {
+impl @rle.Mergeable for DenseTestRun with fn can_merge(_a, _b) {
   true
 }
 
 ///|
-impl @rle.Mergeable for DenseTestRun with merge(a, b) {
+impl @rle.Mergeable for DenseTestRun with fn merge(a, b) {
   { count: a.count + b.count }
 }
 
@@ -969,8 +973,8 @@ test "Rle::each_with_position multiple runs (TestRange)" {
   let positions : Array[(Int, Int)] = []
   rle.each_with_position(fn(_run, start, end) { positions.push((start, end)) })
   inspect(positions.length(), content="2")
-  inspect(positions[0], content="(0, 3)")
-  inspect(positions[1], content="(3, 6)")
+  debug_inspect(positions[0], content="(0, 3)")
+  debug_inspect(positions[1], content="(3, 6)")
 }
 
 ///|
@@ -984,28 +988,28 @@ test "Rle::iter_units empty" {
 test "Rle::iter_units consecutive" {
   let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
   let units = rle.iter_units().collect()
-  inspect(units, content="[0, 1, 2, 3, 4]")
+  debug_inspect(units, content="[0, 1, 2, 3, 4]")
 }
 
 ///|
 test "Rle::iter_units with gaps" {
   let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([0, 1, 2, 5, 6, 7])
   let units = rle.iter_units().collect()
-  inspect(units, content="[0, 1, 2, 5, 6, 7]")
+  debug_inspect(units, content="[0, 1, 2, 5, 6, 7]")
 }
 
 ///|
 test "Rle::iter_units single element" {
   let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([42])
   let units = rle.iter_units().collect()
-  inspect(units, content="[42]")
+  debug_inspect(units, content="[42]")
 }
 
 ///|
 test "Rle::iter_units with duplicates in input" {
   let rle : @rle.Rle[TestRange] = @rle.Rle::from_sorted_ints([1, 1, 2, 5, 5, 6])
   let units = rle.iter_units().collect()
-  inspect(units, content="[1, 2, 5, 6]")
+  debug_inspect(units, content="[1, 2, 5, 6]")
 }
 
 ///|
@@ -1013,5 +1017,5 @@ test "Rle::iter_units index-free (DenseTestRun)" {
   let rle : @rle.Rle[DenseTestRun] = @rle.Rle::from_sorted_ints([0, 1, 2, 3, 4])
   // DenseTestRun uses global_start + offset path
   let units = rle.iter_units().collect()
-  inspect(units, content="[0, 1, 2, 3, 4]")
+  debug_inspect(units, content="[0, 1, 2, 3, 4]")
 }
