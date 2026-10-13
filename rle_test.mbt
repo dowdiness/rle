@@ -209,10 +209,10 @@ test "Rle::concat merges adjacent" {
 }
 
 ///|
-test "Rle::extend merges in-place" {
+test "Rle::extend_from merges in-place" {
   let a = @rle.Rle::from_string("hello")
   let b = @rle.Rle::from_string(" world")
-  a.extend(b)
+  a.extend_from(b)
   inspect(a.length(), content="1")
   inspect(a.to_string(), content="hello world")
 }
@@ -379,11 +379,11 @@ test "RleCursor::is_stale returns true after clear" {
 }
 
 ///|
-test "RleCursor::is_stale returns true after extend" {
+test "RleCursor::is_stale returns true after extend_from" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let other = @rle.Rle::from_string(" world")
-  rle.extend(other)
+  rle.extend_from(other)
   inspect(cursor.is_stale(), content="true")
 }
 
@@ -806,13 +806,13 @@ test "Spanning::logical_length - Runs matches span for String" {
 /// Test helper: index-carrying range type for testing FromRange/Addressable.
 /// Mirrors the spec's LvRange consumer example.
 priv struct TestRange {
-  start : Int
-  count : Int
+  start : Int32
+  count : Int32
 }
 
 ///|
 impl @rle.FromRange for TestRange with fn from_range(start, count) {
-  { start, count }
+  { start, count, }
 }
 
 ///|
@@ -837,13 +837,13 @@ impl @rle.Mergeable for TestRange with fn can_merge(a, b) {
 
 ///|
 impl @rle.Mergeable for TestRange with fn merge(a, b) {
-  { start: a.start, count: a.count + b.count }
+  { start: a.start, count: a.count + b.count, }
 }
 
 ///|
 /// Test helper: index-free dense run type. Tests the global_start + offset path.
 priv struct DenseTestRun {
-  count : Int
+  count : Int32
 }
 
 ///|
@@ -877,7 +877,7 @@ impl @rle.Mergeable for DenseTestRun with fn can_merge(_a, _b) {
 
 ///|
 impl @rle.Mergeable for DenseTestRun with fn merge(a, b) {
-  { count: a.count + b.count }
+  { count: a.count + b.count, }
 }
 
 ///|
@@ -944,7 +944,7 @@ test "Rle::from_sorted_ints dense run collapses (index-free)" {
 ///|
 test "Rle::each_with_position on empty" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  let positions : Array[(String, Int, Int)] = []
+  let positions : Array[(String, Int32, Int32)] = []
   rle.each_with_position(fn(run, start, end) {
     positions.push((run, start, end))
   })
@@ -954,7 +954,7 @@ test "Rle::each_with_position on empty" {
 ///|
 test "Rle::each_with_position single run" {
   let rle = @rle.Rle::from_string("hello")
-  let positions : Array[(String, Int, Int)] = []
+  let positions : Array[(String, Int32, Int32)] = []
   rle.each_with_position(fn(run, start, end) {
     positions.push((run, start, end))
   })
@@ -967,10 +967,10 @@ test "Rle::each_with_position single run" {
 ///|
 test "Rle::each_with_position multiple runs (TestRange)" {
   let rle : @rle.Rle[TestRange] = @rle.Rle::from_array([
-    { start: 0, count: 3 },
-    { start: 5, count: 3 },
+    { start: 0, count: 3, },
+    { start: 5, count: 3, },
   ])
-  let positions : Array[(Int, Int)] = []
+  let positions : Array[(Int32, Int32)] = []
   rle.each_with_position(fn(_run, start, end) { positions.push((start, end)) })
   @debug.debug_inspect(positions.length(), content="2")
   @debug.debug_inspect(positions[0], content="(0, 3)")

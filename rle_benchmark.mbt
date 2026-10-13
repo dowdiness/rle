@@ -3,21 +3,21 @@
 
 // BenchRun: a non-mergeable run type for benchmarks.
 // can_merge returns false so runs stay separate after construction,
-// giving realistic multi-run data for range/concat/extend benchmarks.
+// giving realistic multi-run data for range/concat/extend_from benchmarks.
 // No derive(Debug, Eq) — avoids leaking into the public interface.
 
 ///|
 priv struct BenchRun {
-  len : Int
+  len : Int32
 }
 
 ///|
-impl HasLength for BenchRun with fn length(self : BenchRun) -> Int {
+impl HasLength for BenchRun with fn length(self : BenchRun) -> Int32 {
   self.len
 }
 
 ///|
-impl Spanning for BenchRun with fn span(self : BenchRun) -> Int {
+impl Spanning for BenchRun with fn span(self : BenchRun) -> Int32 {
   self.len
 }
 
@@ -32,10 +32,10 @@ impl Mergeable for BenchRun with fn merge(a : BenchRun, _b : BenchRun) -> BenchR
 }
 
 ///|
-fn make_bench_runs(count : Int, run_len : Int) -> Runs[BenchRun] {
+fn make_bench_runs(count : Int32, run_len : Int32) -> Runs[BenchRun] {
   let arr : Array[BenchRun] = []
   for _i = 0; _i < count; _i = _i + 1 {
-    arr.push({ len: run_len })
+    arr.push({ len: run_len, })
   }
   Runs::from_array(arr)
 }
@@ -84,12 +84,12 @@ test "runs - concat batch" (b : @bench.T) {
 
 ///|
 /// Benchmark: batch extend of non-mergeable runs
-test "runs - extend batch" (b : @bench.T) {
+test "runs - extend_from batch" (b : @bench.T) {
   let template = make_bench_runs(500, 10)
   let runs_b = make_bench_runs(500, 10)
   b.bench(fn() {
     let runs_a = Runs(template.0.copy())
-    runs_a.extend(runs_b)
+    runs_a.extend_from(runs_b)
     b.keep(runs_a.length())
   })
 }

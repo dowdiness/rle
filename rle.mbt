@@ -28,7 +28,7 @@
 pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums? // None = stale, needs rebuild
-  mut version : Int // Monotonically increasing mutation counter
+  mut version : Int32 // Monotonically increasing mutation counter
 } derive(Debug, Eq)
 
 ///|
@@ -39,7 +39,7 @@ pub impl[T : Debug] Show for Rle[T] with fn output(self, logger) {
 ///|
 /// Create an empty Rle with no runs
 pub fn[T] Rle::Rle() -> Rle[T] {
-  { runs: Runs::new(), prefix: None, version: 0 }
+  { runs: Runs::new(), prefix: None, version: 0, }
 }
 
 ///|
@@ -52,7 +52,7 @@ pub fn[T] Rle::new() -> Rle[T] {
 ///|
 /// Construct an Rle from an array, merging adjacent runs
 pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
-  { runs: Runs::from_array(arr), prefix: None, version: 0 }
+  { runs: Runs::from_array(arr), prefix: None, version: 0, }
 }
 
 ///|
@@ -69,15 +69,15 @@ pub fn[T : Mergeable + Spanning] Rle::from_array(arr : Array[T]) -> Rle[T] {
 ///
 /// See `Runs::from_sorted_ints` for deduplication and sortedness contracts.
 pub fn[T : FromRange + Spanning + Mergeable] Rle::from_sorted_ints(
-  ints : Array[Int],
+  ints : Array[Int32],
 ) -> Rle[T] {
-  { runs: Runs::from_sorted_ints(ints), prefix: None, version: 0 }
+  { runs: Runs::from_sorted_ints(ints), prefix: None, version: 0, }
 }
 
 ///|
 /// Wrap existing Runs into an Rle with lazy prefix sums
 pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
-  { runs, prefix: None, version: 0 }
+  { runs, prefix: None, version: 0, }
 }
 
 ///|
@@ -101,7 +101,7 @@ pub fn[T] Rle::from_runs(runs : Runs[T]) -> Rle[T] {
 /// lazy prefix sums, keeping runs context-free and reusable.
 pub fn[T : Spanning] Rle::each_with_position(
   self : Rle[T],
-  f : (T, Int, Int) -> Unit,
+  f : (T, Int32, Int32) -> Unit,
 ) -> Unit {
   let prefix = self.ensure_prefix()
   let mut start = 0
@@ -129,7 +129,9 @@ pub fn[T : Spanning] Rle::each_with_position(
 /// materialized into an array. Call `.collect()` if you need an array.
 ///
 /// **Complexity:** O(total_span) — one yield per expanded integer.
-pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
+pub fn[T : Addressable + Spanning] Rle::iter_units(
+  self : Rle[T],
+) -> Iter[Int32] {
   let prefix = self.ensure_prefix()
   let items = self.runs.0
   let total_runs = items.length()
@@ -139,13 +141,17 @@ pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
   // Cache per-run values to avoid recomputing on every yield.
   // These are updated only when we advance to a new run.
   let mut cached_start = if total_runs > 0 { prefix.span_before(0) } else { 0 }
-  let mut cached_span = if total_runs > 0 { T::span(items[0]) } else { 0 }
+  let mut cached_span = if total_runs > 0 {
+    Spanning::span(items[0])
+  } else {
+    0
+  }
   Iter::new(fn() {
     while run_idx < total_runs {
       if offset < cached_span {
         // Still within the current run — yield the next domain value.
         // Addressable::address translates (run, global_start, offset) → Int.
-        let value = T::address(items[run_idx], cached_start, offset)
+        let value = Addressable::address(items[run_idx], cached_start, offset)
         offset = offset + 1
         return Some(value)
       }
@@ -154,7 +160,7 @@ pub fn[T : Addressable + Spanning] Rle::iter_units(self : Rle[T]) -> Iter[Int] {
       offset = 0
       if run_idx < total_runs {
         cached_start = prefix.span_before(run_idx)
-        cached_span = T::span(items[run_idx])
+        cached_span = Spanning::span(items[run_idx])
       }
     }
     None
@@ -169,7 +175,7 @@ pub fn[T] Rle::to_runs(self : Rle[T]) -> Runs[T] {
 
 ///|
 /// Current mutation version (for cursor staleness detection)
-pub fn[T] Rle::get_version(self : Rle[T]) -> Int {
+pub fn[T] Rle::get_version(self : Rle[T]) -> Int32 {
   self.version
 }
 
@@ -207,7 +213,7 @@ fn[T : Spanning] Rle::ensure_prefix(self : Rle[T]) -> PrefixSums {
 
 ///|
 /// HasLength impl — number of runs
-pub impl[T] HasLength for Rle[T] with fn length(self : Rle[T]) -> Int {
+pub impl[T] HasLength for Rle[T] with fn length(self : Rle[T]) -> Int32 {
   self.runs.length()
 }
 
@@ -219,7 +225,7 @@ pub impl[T] HasLength for Rle[T] with fn is_empty(self : Rle[T]) -> Bool {
 
 ///|
 /// Get run at index (0-indexed)
-pub fn[T] Rle::get(self : Rle[T], index : Int) -> T? {
+pub fn[T] Rle::get(self : Rle[T], index : Int32) -> T? {
   self.runs.get(index)
 }
 
@@ -231,13 +237,13 @@ pub fn[T] Rle::iter(self : Rle[T]) -> Iter[T] {
 
 ///|
 /// Spanning impl — total span, O(1) with cache
-pub impl[T : Spanning] Spanning for Rle[T] with fn span(self : Rle[T]) -> Int {
+pub impl[T : Spanning] Spanning for Rle[T] with fn span(self : Rle[T]) -> Int32 {
   self.ensure_prefix().span()
 }
 
 ///|
 /// Spanning impl — logical content length, O(1) with cache
-pub impl[T : Spanning] Spanning for Rle[T] with fn logical_length(self : Rle[T]) -> Int {
+pub impl[T : Spanning] Spanning for Rle[T] with fn logical_length(self : Rle[T]) -> Int32 {
   self.ensure_prefix().logical_length()
 }
 
@@ -258,7 +264,7 @@ pub fn[T : Mergeable + Spanning] Rle::append(
 
 ///|
 /// Find position - O(log n) with cache
-pub fn[T : Spanning] Rle::find(self : Rle[T], pos : Int) -> RunPos? {
+pub fn[T : Spanning] Rle::find(self : Rle[T], pos : Int32) -> RunPos? {
   let sums = self.ensure_prefix()
   self.runs.find_fast(sums, pos)
 }
@@ -273,8 +279,8 @@ pub fn[T : Spanning] Rle::find(self : Rle[T], pos : Int) -> RunPos? {
 /// irrelevant earlier runs.
 pub fn[T : Spanning] Rle::range(
   self : Rle[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[Iter[Slice[T]], RleError] {
   let sums = self.ensure_prefix()
   let total = sums.span()
@@ -290,8 +296,8 @@ pub fn[T : Spanning] Rle::range(
 fn[T] Rle::range_unchecked(
   self : Rle[T],
   sums : PrefixSums,
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Iter[Slice[T]] {
   if start == end {
     return Iter::empty()
@@ -312,7 +318,7 @@ fn[T] Rle::range_unchecked(
       } else {
         item_end - prefix
       }
-      result.push({ value: item, start: slice_start, end: slice_end })
+      result.push({ value: item, start: slice_start, end: slice_end, })
     }
     if item_end >= end {
       break
@@ -327,8 +333,8 @@ fn[T] Rle::range_unchecked(
 /// Iterate slices with clamped bounds
 pub fn[T : Spanning] Rle::range_clamped(
   self : Rle[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Iter[Slice[T]] {
   let total = self.span()
   let s = if start < 0 { 0 } else { start }
@@ -343,7 +349,7 @@ pub fn[T : Spanning] Rle::range_clamped(
 /// Split at position - invalidates cache
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::split(
   self : Rle[T],
-  pos : Int,
+  pos : Int32,
 ) -> Result[(Rle[T], Rle[T]), RleError] {
   match self.runs.split(pos) {
     Ok((left, right)) => Ok((Rle::from_runs(left), Rle::from_runs(right)))
@@ -371,7 +377,7 @@ pub fn[T : Mergeable + Spanning] Rle::concat(
 /// Extend in-place — invalidates cache and bumps version only if actual
 /// mutation occurs. Detects mutation by checking both the run count and
 /// the last run's span (a merge changes span even when count is unchanged).
-pub fn[T : Mergeable + Spanning] Rle::extend(
+pub fn[T : Mergeable + Spanning] Rle::extend_from(
   self : Rle[T],
   other : Rle[T],
 ) -> Unit {
@@ -380,13 +386,13 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
   }
   let old_count = self.runs.length()
   let old_last_span = match self.runs.get(old_count - 1) {
-    Some(r) => T::span(r)
+    Some(r) => Spanning::span(r)
     None => 0
   }
-  self.runs.extend(other.runs)
+  self.runs.extend_from(other.runs)
   let new_count = self.runs.length()
   let new_last_span = match self.runs.get(new_count - 1) {
-    Some(r) => T::span(r)
+    Some(r) => Spanning::span(r)
     None => 0
   }
   if new_count != old_count || new_last_span != old_last_span {
@@ -398,7 +404,7 @@ pub fn[T : Mergeable + Spanning] Rle::extend(
 /// Get the run containing span position `pos` - O(log n) with cache
 pub fn[T : Spanning] Rle::value_at(
   self : Rle[T],
-  pos : Int,
+  pos : Int32,
 ) -> Result[T, RleError] {
   let sums = self.ensure_prefix()
   let total = sums.span()
@@ -433,7 +439,7 @@ pub fn[T : Spanning] Rle::value_at(
 /// Insert an Rle at span position `pos`, returning a new Rle
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(
   self : Rle[T],
-  pos : Int,
+  pos : Int32,
   elem : Rle[T],
 ) -> Result[Rle[T], RleError] {
   match self.runs.insert(pos, elem.runs) {
@@ -446,8 +452,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(
 /// Delete the range [start, end), returning a new Rle
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::delete(
   self : Rle[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[Rle[T], RleError] {
   match self.runs.delete(start~, end~) {
     Ok(runs) => Ok(Rle::from_runs(runs))
@@ -459,8 +465,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::delete(
 /// Replace the range [start, end) with `replacement`, returning a new Rle
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::splice(
   self : Rle[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
   replacement : Rle[T],
 ) -> Result[Rle[T], RleError] {
   match self.runs.splice(start~, end~, replacement.runs) {
@@ -468,3 +474,18 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::splice(
     Err(e) => Err(e)
   }
 }
+
+///|
+pub extend Rle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Rle with Eq::{not_equal, equal}
+
+///|
+pub extend Rle with Show::{output}
+
+///|
+pub extend Rle with HasLength::{length, is_empty}
+
+///|
+pub extend Rle with Spanning::{logical_length, span}

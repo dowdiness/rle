@@ -34,7 +34,7 @@ Six traits govern what types can be stored in the RLE structure. The first four 
 |-------|---------|--------------|
 | `HasLength` | Basic `length()` and `is_empty()` | Everything |
 | `Spanning : HasLength` | `span()` and `logical_length()` | Queries: `find`, `span`, `range`, `value_at`, `cursor` |
-| `Mergeable` | `can_merge()` and `merge()` | Mutations: `append`, `concat`, `extend`, `from_array` |
+| `Mergeable` | `can_merge()` and `merge()` | Mutations: `append`, `concat`, `extend_from`, `from_array` |
 | `Sliceable` | `slice(start~, end~)` | Positional edits: `split`, `insert`, `delete`, `splice` |
 | `FromRange` | `from_range(start, count)` | Constructors: `from_sorted_ints` |
 | `Addressable` | `address(global_start, offset)` | Expansion: `iter_units` |
@@ -65,7 +65,7 @@ The library never looks inside your type — it only calls the trait methods. Th
 - `find_fast(sums, pos)` — O(log n) upper-bound binary search on prefix sums
 - `split(pos)` — O(n), requires `Sliceable`
 - `concat(other)` — O(n), uses stack-merge at boundary
-- `extend(other)` — O(m) in-place, same stack-merge pattern
+- `extend_from(other)` — O(m) in-place, same stack-merge pattern
 - `range(start~, end~)` — O(n) linear scan producing `Iter[Slice[T]]`
 - `insert(pos, elem)` / `delete(start~, end~)` / `splice(start~, end~, replacement)` — composed from `split` and `concat`
 
@@ -128,7 +128,7 @@ A lazy view — stores bounds without materializing the sub-range. Call `to_inne
 
 ### Stack-Based Batch Merge
 
-Used by `from_array_batch`, `concat`, and `extend`. Pattern:
+Used by `from_array_batch`, `concat`, and `extend_from`. Pattern:
 
 ```text
 for each item:
@@ -179,7 +179,7 @@ These produce new `Runs`/`Rle` values (functional style). The original is not mo
 - **Dual-length** (`span` vs `logical_length`): Supports CRDT tombstones and gap buffers where index space differs from visible content.
 - **Stack-based batch merge**: Single-pass O(n) construction with automatic invariant maintenance.
 - **Cursor staleness is conservative**: Returns `None` rather than potentially wrong data. No ABA problem due to monotonic versioning.
-- **Functional structural operations**: `split`/`insert`/`delete`/`splice` return new values, avoiding cache invalidation complexity. Only `append`/`extend`/`clear` mutate in place.
+- **Functional structural operations**: `split`/`insert`/`delete`/`splice` return new values, avoiding cache invalidation complexity. Only `append`/`extend_from`/`clear` mutate in place.
 - **Lazy `Slice` views**: `range()` returns `Slice[T]` (bounds only), deferring materialization to `to_inner()` to avoid unnecessary allocation.
 - **Algorithm-by-trait** for integer ranges: The library ships `FromRange` and `Addressable` traits instead of a concrete `IntRange` type. This preserves context-freedom — the library never stores positions inside runs. Whether a consumer uses index-carrying types (positions stored in the run) or index-free types (positions derived from prefix sums) is invisible to the library. The library provides generic algorithms, consumers provide the types.
 

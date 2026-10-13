@@ -1,6 +1,20 @@
 ///| Property-based tests for Runs and Rle
 
 ///|
+/// Choose a valid UTF-16 boundary without discarding non-BMP QuickCheck inputs.
+fn boundary_at_or_before(text : String, target : Int32) -> Int32 {
+  let mut offset = 0
+  for ch in text {
+    let next = offset + ch.utf16_len()
+    if next > target {
+      break
+    }
+    offset = next
+  }
+  offset
+}
+
+///|
 /// Property: Mergeable associativity - merge(merge(a, b), c) == merge(a, merge(b, c))
 fn prop_merge_associative(triple : (String, String, String)) -> Bool {
   let (a, b, c) = triple
@@ -21,7 +35,7 @@ fn prop_slice_merge_roundtrip(text : String) -> Bool {
   if len == 0 {
     return true
   }
-  let k = len / 2
+  let k = boundary_at_or_before(text, len / 2)
   match @rle.Sliceable::slice(text, start=0, end=k) {
     Ok(left) =>
       match @rle.Sliceable::slice(text, start=k, end=len) {
@@ -102,7 +116,7 @@ fn prop_split_preserves_len(text : String) -> Bool {
   if total == 0 {
     return true
   }
-  let k = total / 2
+  let k = boundary_at_or_before(text, total / 2)
   match runs.split(k) {
     Ok((left, right)) => left.span() + right.span() == total
     Err(_) => false
@@ -164,7 +178,7 @@ fn prop_split_concat_roundtrip(text : String) -> Bool {
     return true
   }
   let rle = @rle.Rle::from_string(text)
-  let mid = len / 2
+  let mid = boundary_at_or_before(text, len / 2)
   match rle.split(mid) {
     Ok((left, right)) => left.concat(right).to_string() == text
     Err(_) => false
@@ -210,8 +224,8 @@ fn prop_range_coverage(text : String) -> Bool {
     return true
   }
   let rle = @rle.Rle::from_string(text)
-  let start = 1
-  let end = len - 1
+  let start = boundary_at_or_before(text, 1)
+  let end = boundary_at_or_before(text, len - 1)
   match rle.range(start~, end~) {
     Ok(iter) => {
       let slices = iter.collect()
@@ -234,7 +248,7 @@ test "property: range covers exactly the requested range" {
 }
 
 ///|
-/// Property: extend produces same result as concat
+/// Property: extend_from produces same result as concat
 fn prop_extend_equals_concat(pair : (Array[String], Array[String])) -> Bool {
   let (a, b) = pair
   let runs_a = @rle.Runs::from_array(a)
@@ -242,12 +256,12 @@ fn prop_extend_equals_concat(pair : (Array[String], Array[String])) -> Bool {
   let concatenated = runs_a.concat(runs_b)
   let runs_a2 = @rle.Runs::from_array(a)
   let runs_b2 = @rle.Runs::from_array(b)
-  runs_a2.extend(runs_b2)
+  runs_a2.extend_from(runs_b2)
   runs_a2.to_array() == concatenated.to_array()
 }
 
 ///|
-test "property: extend equals concat" {
+test "property: extend_from equals concat" {
   @qc.quick_check_fn(prop_extend_equals_concat)
 }
 
@@ -281,7 +295,7 @@ fn prop_insert_preserves_len(pair : (String, String)) -> Bool {
       Err(_) => false
     }
   } else {
-    let pos = total / 2
+    let pos = boundary_at_or_before(text, total / 2)
     match rle.insert(pos, elem) {
       Ok(result) => result.span() == total + elem.span()
       Err(_) => false
@@ -302,8 +316,8 @@ fn prop_delete_preserves_len(text : String) -> Bool {
   if total < 2 {
     return true
   }
-  let start = total / 4
-  let end = total / 4 + total / 2
+  let start = boundary_at_or_before(text, total / 4)
+  let end = boundary_at_or_before(text, total / 4 + total / 2)
   match rle.delete(start~, end~) {
     Ok(result) => result.span() == total - (end - start)
     Err(_) => false
@@ -325,8 +339,8 @@ fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
   if total < 2 {
     return true
   }
-  let start = total / 4
-  let end = total / 4 + total / 2
+  let start = boundary_at_or_before(text, total / 4)
+  let end = boundary_at_or_before(text, total / 4 + total / 2)
   match rle.splice(start~, end~, replacement) {
     Ok(result) => result.span() == total - (end - start) + replacement.span()
     Err(_) => false
@@ -346,8 +360,8 @@ fn prop_splice_equals_delete_insert(pair : (String, String)) -> Bool {
   if total < 2 {
     return true
   }
-  let start = total / 4
-  let end = total / 4 + total / 2
+  let start = boundary_at_or_before(text, total / 4)
+  let end = boundary_at_or_before(text, total / 4 + total / 2)
   let replacement = @rle.Rle::from_string(replacement_text)
   // splice approach
   let rle1 = @rle.Rle::from_string(text)
@@ -376,13 +390,13 @@ test "property: splice equals delete then insert" {
 ///|
 /// Property test helper: index-carrying range.
 priv struct PropRange {
-  start : Int
-  count : Int
+  start : Int32
+  count : Int32
 }
 
 ///|
 impl @rle.FromRange for PropRange with fn from_range(start, count) {
-  { start, count }
+  { start, count, }
 }
 
 ///|
@@ -407,15 +421,15 @@ impl @rle.Mergeable for PropRange with fn can_merge(a, b) {
 
 ///|
 impl @rle.Mergeable for PropRange with fn merge(a, b) {
-  { start: a.start, count: a.count + b.count }
+  { start: a.start, count: a.count + b.count, }
 }
 
 ///|
-fn sorted_unique_limited(raw : Array[Int]) -> Array[Int] {
+fn sorted_unique_limited(raw : Array[Int32]) -> Array[Int32] {
   let filtered = raw.filter(fn(x) { x >= 0 && x < 10000 })
   let sorted = filtered.copy()
   sorted.sort()
-  let deduped : Array[Int] = []
+  let deduped : Array[Int32] = []
   for v in sorted {
     match deduped.last() {
       Some(prev) => if v != prev { deduped.push(v) }
@@ -428,7 +442,7 @@ fn sorted_unique_limited(raw : Array[Int]) -> Array[Int] {
 ///|
 /// Property: from_sorted_ints → iter_units round-trip preserves values.
 /// Takes arbitrary non-negative ints, sorts and deduplicates, then verifies round-trip.
-fn prop_from_sorted_iter_roundtrip(raw : Array[Int]) -> Bool {
+fn prop_from_sorted_iter_roundtrip(raw : Array[Int32]) -> Bool {
   let deduped = sorted_unique_limited(raw)
   let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(deduped)
   let result = rle.iter_units().collect()
@@ -473,7 +487,7 @@ test "property: find_fast matches find and prefix sums are monotonic" {
 
 ///|
 /// Property: cursor seek positions match Rle::find over multi-run data.
-fn prop_cursor_seek_matches_find(raw : Array[Int]) -> Bool {
+fn prop_cursor_seek_matches_find(raw : Array[Int32]) -> Bool {
   let values = sorted_unique_limited(raw)
   let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(values)
   let total = rle.span()
@@ -512,7 +526,7 @@ test "property: cursor seek matches find over run boundaries" {
 
 ///|
 /// Property: cursor advance/retreat lands on the same positions as seek.
-fn prop_cursor_move_matches_seek(raw : Array[Int]) -> Bool {
+fn prop_cursor_move_matches_seek(raw : Array[Int32]) -> Bool {
   let values = sorted_unique_limited(raw)
   let rle : @rle.Rle[PropRange] = @rle.Rle::from_sorted_ints(values)
   let total = rle.span()
@@ -550,4 +564,23 @@ test "safety corpus covers boundary inputs" {
   let cases = ["", "a", "ab", "hello world", "😀", "a😀b", "    "]
   let lengths = cases.map(fn(text) { @rle.Spanning::span(text) })
   @debug.debug_inspect(lengths, content="[0, 1, 2, 11, 2, 4, 4]")
+}
+
+///|
+test "Unicode boundary properties cover supplementary characters" {
+  let cases = ["", "a", "😀", "a😀b", "😀😀", "𐀀ab􏿿"]
+  for text in cases {
+    assert_true(prop_slice_merge_roundtrip(text))
+    assert_true(prop_split_preserves_len(text))
+    assert_true(prop_split_concat_roundtrip(text))
+    assert_true(prop_range_coverage(text))
+    assert_true(prop_delete_preserves_len(text))
+    for replacement in cases {
+      assert_true(prop_insert_preserves_len((text, replacement)))
+      assert_true(prop_splice_preserves_len((text, replacement)))
+      assert_true(prop_splice_equals_delete_insert((text, replacement)))
+    }
+  }
+  assert_eq(boundary_at_or_before("a😀b", 2), 1)
+  assert_eq(boundary_at_or_before("a😀b", 3), 3)
 }

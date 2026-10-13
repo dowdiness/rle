@@ -35,7 +35,7 @@ pub(open) trait Mergeable {
 /// **Sliceable** — extract a sub-range `[start, end)` from a run.
 ///
 /// This trait is **optional**. Without it, you can still use `append`, `find`,
-/// `concat`, `extend`, `value_at`, and `range`. You need `Sliceable` to unlock
+/// `concat`, `extend_from`, `value_at`, and `range`. You need `Sliceable` to unlock
 /// positional editing operations: `split`, `insert`, `delete`, and `splice`.
 /// Note: `range()` returns `Slice[T]` values that work without `Sliceable`,
 /// but calling `Slice::to_inner()` to materialize them requires it.
@@ -51,7 +51,7 @@ pub(open) trait Mergeable {
 /// index inside a surrogate pair returns `Err(InvalidSlice(InvalidIndex))`.
 /// Always slice on valid character boundaries.
 pub(open) trait Sliceable {
-  fn slice(Self, start~ : Int, end~ : Int) -> Result[Self, RleError]
+  fn slice(Self, start~ : Int32, end~ : Int32) -> Result[Self, RleError]
 }
 
 ///|
@@ -60,7 +60,7 @@ pub(open) trait Sliceable {
 ///
 /// Provides `is_empty()` with a default implementation (`length() == 0`).
 pub(open) trait HasLength {
-  fn length(Self) -> Int
+  fn length(Self) -> Int32
 
   /// Returns true if length is zero
   fn is_empty(Self) -> Bool = _
@@ -105,8 +105,8 @@ impl HasLength with fn is_empty(self) {
 /// For strings, this is UTF-16 code units. For pixel runs, pixel count.
 /// Choose units that match your indexing needs.
 pub(open) trait Spanning: HasLength {
-  fn span(Self) -> Int = _
-  fn logical_length(Self) -> Int = _
+  fn span(Self) -> Int32 = _
+  fn logical_length(Self) -> Int32 = _
 }
 
 ///|
@@ -149,7 +149,7 @@ impl Spanning with fn logical_length(self) {
 /// knowing the element type, `FromRange` lets the library compress sorted
 /// integers without knowing your run type.
 pub(open) trait FromRange {
-  fn from_range(start : Int, count : Int) -> Self
+  fn from_range(start : Int32, count : Int32) -> Self
 }
 
 ///|
@@ -180,5 +180,5 @@ pub(open) trait FromRange {
 /// Both approaches produce correct results. The library doesn't know or care
 /// which one your type uses — it just calls `address` and gets an `Int` back.
 pub(open) trait Addressable {
-  fn address(Self, global_start : Int, offset : Int) -> Int
+  fn address(Self, global_start : Int32, offset : Int32) -> Int32
 }

@@ -34,7 +34,7 @@ pub fn[T : Mergeable + Spanning] Runs::from_array_batch(
 ) -> Runs[T] {
   let out : Array[T] = []
   for item in arr {
-    if T::span(item) <= 0 {
+    if Spanning::span(item) <= 0 {
       continue
     }
     push_normalized(out, item)
@@ -49,9 +49,9 @@ fn[T : Mergeable] push_normalized(out : Array[T], item : T) -> Unit {
   let mut cur = item
   while !out.is_empty() {
     let last = out[out.length() - 1]
-    if T::can_merge(last, cur) {
+    if Mergeable::can_merge(last, cur) {
       let _ = out.pop()
-      cur = T::merge(last, cur)
+      cur = Mergeable::merge(last, cur)
     } else {
       break
     }
@@ -101,7 +101,7 @@ pub fn[T : Mergeable + Spanning] Runs::from_array(arr : Array[T]) -> Runs[T] {
 ///
 /// `ints[i-1] + 1` must not overflow `Int` for any `i`.
 pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(
-  ints : Array[Int],
+  ints : Array[Int32],
 ) -> Runs[T] {
   if ints.is_empty() {
     return Runs::new()
@@ -137,7 +137,7 @@ pub fn[T : FromRange + Spanning + Mergeable] Runs::from_sorted_ints(
 
 ///|
 /// HasLength impl — number of runs
-pub impl[T] HasLength for Runs[T] with fn length(self : Runs[T]) -> Int {
+pub impl[T] HasLength for Runs[T] with fn length(self : Runs[T]) -> Int32 {
   self.0.length()
 }
 
@@ -150,7 +150,7 @@ pub impl[T] HasLength for Runs[T] with fn is_empty(self : Runs[T]) -> Bool {
 ///|
 /// Get run at index (0-indexed), returns None if out of bounds
 #alias("_[_]")
-pub fn[T] Runs::get(self : Runs[T], index : Int) -> T? {
+pub fn[T] Runs::get(self : Runs[T], index : Int32) -> T? {
   if index < 0 || index >= self.0.length() {
     None
   } else {
@@ -172,16 +172,16 @@ pub fn[T] Runs::to_array(self : Runs[T]) -> Array[T] {
 
 ///|
 /// Spanning impl — total span, O(n)
-pub impl[T : Spanning] Spanning for Runs[T] with fn span(self : Runs[T]) -> Int {
-  self.0.fold(init=0, fn(acc, item) { acc + T::span(item) })
+pub impl[T : Spanning] Spanning for Runs[T] with fn span(self : Runs[T]) -> Int32 {
+  self.0.fold(init=0, fn(acc, item) { acc + Spanning::span(item) })
 }
 
 ///|
 /// Spanning impl — total logical length, O(n)
 pub impl[T : Spanning] Spanning for Runs[T] with fn logical_length(
   self : Runs[T],
-) -> Int {
-  self.0.fold(init=0, fn(acc, item) { acc + T::logical_length(item) })
+) -> Int32 {
+  self.0.fold(init=0, fn(acc, item) { acc + Spanning::logical_length(item) })
 }
 
 ///|
@@ -199,13 +199,13 @@ pub fn[T : Mergeable + Spanning] Runs::append(
   self : Runs[T],
   elem : T,
 ) -> Result[Unit, RleError] {
-  if T::span(elem) <= 0 {
+  if Spanning::span(elem) <= 0 {
     return Err(RleError::Internal(InternalError::EmptyElement))
   }
   match self.0.last() {
     Some(last) =>
-      if T::can_merge(last, elem) {
-        self.0[self.0.length() - 1] = T::merge(last, elem)
+      if Mergeable::can_merge(last, elem) {
+        self.0[self.0.length() - 1] = Mergeable::merge(last, elem)
         self.normalize_tail()
       } else {
         self.0.push(elem)
@@ -232,8 +232,8 @@ fn[T : Mergeable] Runs::normalize_tail(self : Runs[T]) -> Unit {
     let prev = last - 1
     let a = self.0[prev]
     let b = self.0[last]
-    if T::can_merge(a, b) {
-      self.0[prev] = T::merge(a, b)
+    if Mergeable::can_merge(a, b) {
+      self.0[prev] = Mergeable::merge(a, b)
       let _ = self.0.pop()
     } else {
       break
@@ -244,15 +244,15 @@ fn[T : Mergeable] Runs::normalize_tail(self : Runs[T]) -> Unit {
 ///|
 /// Find position in runs - O(n) linear scan
 /// Prefer `Runs::find_fast` with cached prefix sums for repeated lookups.
-pub fn[T : Spanning] Runs::find(self : Runs[T], pos : Int) -> RunPos? {
+pub fn[T : Spanning] Runs::find(self : Runs[T], pos : Int32) -> RunPos? {
   if pos < 0 {
     return None
   }
   let mut prefix = 0
   for i = 0; i < self.0.length(); i = i + 1 {
-    let run_len = T::span(self.0[i])
+    let run_len = Spanning::span(self.0[i])
     if pos < prefix + run_len {
-      return Some({ run: i, offset: pos - prefix })
+      return Some({ run: i, offset: pos - prefix, })
     }
     prefix = prefix + run_len
   }
@@ -272,7 +272,7 @@ pub fn[T : Spanning] Runs::find(self : Runs[T], pos : Int) -> RunPos? {
 pub fn[T] Runs::find_fast(
   self : Runs[T],
   sums : PrefixSums,
-  pos : Int,
+  pos : Int32,
 ) -> RunPos? {
   if pos < 0 || self.is_empty() {
     return None
@@ -296,26 +296,26 @@ pub fn[T] Runs::find_fast(
     }
   }
   if lo == 0 {
-    Some({ run: 0, offset: pos })
+    Some({ run: 0, offset: pos, })
   } else {
-    Some({ run: lo, offset: pos - sums.spans[lo - 1] })
+    Some({ run: lo, offset: pos - sums.spans[lo - 1], })
   }
 }
 
 ///|
 /// Build prefix sums from runs
 pub fn[T : Spanning] Runs::prefix_sums(self : Runs[T]) -> PrefixSums {
-  let spans : Array[Int] = []
-  let content : Array[Int] = []
+  let spans : Array[Int32] = []
+  let content : Array[Int32] = []
   let mut span_sum = 0
   let mut content_sum = 0
   for item in self.0 {
-    span_sum = span_sum + T::span(item)
-    content_sum = content_sum + T::logical_length(item)
+    span_sum = span_sum + Spanning::span(item)
+    content_sum = content_sum + Spanning::logical_length(item)
     spans.push(span_sum)
     content.push(content_sum)
   }
-  { spans, content }
+  { spans, content, }
 }
 
 ///|
@@ -326,8 +326,8 @@ pub fn[T : Spanning] Runs::prefix_sums(self : Runs[T]) -> PrefixSums {
 /// when the caller only needs to inspect metadata or count matches.
 pub fn[T : Spanning] Runs::range(
   self : Runs[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[Iter[Slice[T]], RleError] {
   let total = self.span()
   match range_check(start, end, total) {
@@ -341,8 +341,8 @@ pub fn[T : Spanning] Runs::range(
 /// Build range slices after the caller has already validated or clamped bounds.
 fn[T : Spanning] Runs::range_unchecked(
   self : Runs[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Iter[Slice[T]] {
   if start == end {
     return Iter::empty()
@@ -350,12 +350,12 @@ fn[T : Spanning] Runs::range_unchecked(
   let result : Array[Slice[T]] = []
   let mut pos = 0
   for item in self.0 {
-    let run_len = T::span(item)
+    let run_len = Spanning::span(item)
     let item_end = pos + run_len
     if item_end > start && pos < end {
       let slice_start = if pos < start { start - pos } else { 0 }
       let slice_end = if item_end > end { end - pos } else { run_len }
-      result.push({ value: item, start: slice_start, end: slice_end })
+      result.push({ value: item, start: slice_start, end: slice_end, })
     }
     pos = item_end
     if pos >= end {
@@ -369,8 +369,8 @@ fn[T : Spanning] Runs::range_unchecked(
 /// Iterate slices with clamped bounds
 pub fn[T : Spanning] Runs::range_clamped(
   self : Runs[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Iter[Slice[T]] {
   let total = self.span()
   let s = if start < 0 { 0 } else { start }
@@ -394,7 +394,7 @@ pub fn[T : Spanning] Runs::range_clamped(
 /// differently.
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
   self : Runs[T],
-  pos : Int,
+  pos : Int32,
 ) -> Result[(Runs[T], Runs[T]), RleError] {
   let total = self.span()
   if pos < 0 || pos > total {
@@ -410,7 +410,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
   let right : Runs[T] = Runs::new()
   let mut cur = 0
   for item in self.0 {
-    let run_len = T::span(item)
+    let run_len = Spanning::span(item)
     let item_end = cur + run_len
     if item_end <= pos {
       match left.append(item) {
@@ -425,7 +425,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
     } else {
       let offset = pos - cur
       if offset > 0 {
-        match T::slice(item, start=0, end=offset) {
+        match Sliceable::slice(item, start=0, end=offset) {
           Ok(slice) =>
             match left.append(slice) {
               Err(e) => return Err(e)
@@ -435,7 +435,7 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
         }
       }
       if offset < run_len {
-        match T::slice(item, start=offset, end=run_len) {
+        match Sliceable::slice(item, start=offset, end=run_len) {
           Ok(slice) =>
             match right.append(slice) {
               Err(e) => return Err(e)
@@ -474,7 +474,7 @@ pub fn[T : Mergeable + Spanning] Runs::concat(
   }
   let out : Array[T] = self.0.copy()
   for item in other.0 {
-    if T::span(item) <= 0 {
+    if Spanning::span(item) <= 0 {
       continue
     }
     push_normalized(out, item)
@@ -484,7 +484,7 @@ pub fn[T : Mergeable + Spanning] Runs::concat(
 
 ///|
 /// Extend in-place from another Runs - batch optimized
-pub fn[T : Mergeable + Spanning] Runs::extend(
+pub fn[T : Mergeable + Spanning] Runs::extend_from(
   self : Runs[T],
   other : Runs[T],
 ) -> Unit {
@@ -492,7 +492,7 @@ pub fn[T : Mergeable + Spanning] Runs::extend(
     return
   }
   for item in other.0 {
-    if T::span(item) <= 0 {
+    if Spanning::span(item) <= 0 {
       continue
     }
     push_normalized(self.0, item)
@@ -503,7 +503,7 @@ pub fn[T : Mergeable + Spanning] Runs::extend(
 /// Get the run containing span position `pos` - O(n) linear scan
 pub fn[T : Spanning] Runs::value_at(
   self : Runs[T],
-  pos : Int,
+  pos : Int32,
 ) -> Result[T, RleError] {
   let total = self.span()
   if pos < 0 || pos >= total {
@@ -537,7 +537,7 @@ pub fn[T : Spanning] Runs::value_at(
 /// Insert runs at span position `pos`, returning a new Runs
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::insert(
   self : Runs[T],
-  pos : Int,
+  pos : Int32,
   elem : Runs[T],
 ) -> Result[Runs[T], RleError] {
   match self.split(pos) {
@@ -550,8 +550,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::insert(
 /// Delete the range [start, end), returning a new Runs
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::delete(
   self : Runs[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[Runs[T], RleError] {
   let total = self.span()
   match range_check(start, end, total) {
@@ -574,8 +574,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::delete(
 /// Replace the range [start, end) with `replacement`, returning a new Runs
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::splice(
   self : Runs[T],
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
   replacement : Runs[T],
 ) -> Result[Runs[T], RleError] {
   let total = self.span()
@@ -595,7 +595,11 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::splice(
 }
 
 ///|
-fn range_check(start : Int, end : Int, total : Int) -> Result[Unit, RleError] {
+fn range_check(
+  start : Int32,
+  end : Int32,
+  total : Int32,
+) -> Result[Unit, RleError] {
   if start < 0 {
     return Err(
       RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
@@ -618,3 +622,18 @@ fn range_check(start : Int, end : Int, total : Int) -> Result[Unit, RleError] {
   }
   Ok(())
 }
+
+///|
+pub extend Runs with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Runs with Eq::{not_equal, equal}
+
+///|
+pub extend Runs with Show::{output}
+
+///|
+pub extend Runs with HasLength::{length, is_empty}
+
+///|
+pub extend Runs with Spanning::{logical_length, span}

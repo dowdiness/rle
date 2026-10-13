@@ -20,16 +20,16 @@ impl @rle.Mergeable for AuthoredRun with fn merge(
   a : AuthoredRun,
   b : AuthoredRun,
 ) -> AuthoredRun {
-  { author: a.author, text: a.text + b.text }
+  { author: a.author, text: a.text + b.text, }
 }
 
 ///|
-impl @rle.HasLength for AuthoredRun with fn length(self : AuthoredRun) -> Int {
+impl @rle.HasLength for AuthoredRun with fn length(self : AuthoredRun) -> Int32 {
   self.text.length()
 }
 
 ///|
-impl @rle.Spanning for AuthoredRun with fn span(self : AuthoredRun) -> Int {
+impl @rle.Spanning for AuthoredRun with fn span(self : AuthoredRun) -> Int32 {
   self.text.length()
 }
 
@@ -38,18 +38,18 @@ impl @rle.Spanning for AuthoredRun with fn span(self : AuthoredRun) -> Int {
 /// surrogate pair boundaries automatically.
 impl @rle.Sliceable for AuthoredRun with fn slice(
   self : AuthoredRun,
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[AuthoredRun, @rle.RleError] {
   match @rle.Sliceable::slice(self.text, start~, end~) {
-    Ok(sliced) => Ok({ author: self.author, text: sliced })
+    Ok(sliced) => Ok({ author: self.author, text: sliced, })
     Err(e) => Err(e)
   }
 }
 
 ///|
 fn authored(author : String, text : String) -> AuthoredRun {
-  { author, text }
+  { author, text, }
 }
 
 ///|

@@ -12,8 +12,8 @@
 /// The library caches this inside `Rle` (as `prefix: PrefixSums?`). The cache
 /// is set to `None` on mutation and rebuilt lazily on the next query.
 pub(all) struct PrefixSums {
-  spans : Array[Int] // cumulative span lengths
-  content : Array[Int] // cumulative content lengths
+  spans : Array[Int32] // cumulative span lengths
+  content : Array[Int32] // cumulative content lengths
 } derive(Debug, Eq)
 
 ///|
@@ -24,7 +24,7 @@ pub impl Show for PrefixSums with fn output(self, logger) {
 ///|
 /// Create an empty prefix sum table.
 pub fn PrefixSums::PrefixSums() -> PrefixSums {
-  { spans: [], content: [] }
+  { spans: [], content: [], }
 }
 
 ///|
@@ -36,7 +36,7 @@ pub fn PrefixSums::new() -> PrefixSums {
 
 ///|
 /// Total span length - O(1)
-pub impl Spanning for PrefixSums with fn span(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with fn span(self : PrefixSums) -> Int32 {
   match self.spans.last() {
     Some(total) => total
     None => 0
@@ -45,7 +45,7 @@ pub impl Spanning for PrefixSums with fn span(self : PrefixSums) -> Int {
 
 ///|
 /// Total logical length - O(1)
-pub impl Spanning for PrefixSums with fn logical_length(self : PrefixSums) -> Int {
+pub impl Spanning for PrefixSums with fn logical_length(self : PrefixSums) -> Int32 {
   match self.content.last() {
     Some(total) => total
     None => 0
@@ -54,13 +54,13 @@ pub impl Spanning for PrefixSums with fn logical_length(self : PrefixSums) -> In
 
 ///|
 /// Number of runs
-pub impl HasLength for PrefixSums with fn length(self : PrefixSums) -> Int {
+pub impl HasLength for PrefixSums with fn length(self : PrefixSums) -> Int32 {
   self.spans.length()
 }
 
 ///|
 /// Get span offset at run index (end of run i) with bounds checking.
-pub fn PrefixSums::span_at(self : PrefixSums, index : Int) -> Int? {
+pub fn PrefixSums::span_at(self : PrefixSums, index : Int32) -> Int32? {
   if index < 0 || index >= self.spans.length() {
     None
   } else {
@@ -70,10 +70,25 @@ pub fn PrefixSums::span_at(self : PrefixSums, index : Int) -> Int? {
 
 ///|
 /// Get span offset before run index (start of run i)
-pub fn PrefixSums::span_before(self : PrefixSums, index : Int) -> Int {
+pub fn PrefixSums::span_before(self : PrefixSums, index : Int32) -> Int32 {
   if index <= 0 {
     0
   } else {
     self.spans[index - 1]
   }
 }
+
+///|
+pub extend PrefixSums with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PrefixSums with Eq::{not_equal, equal}
+
+///|
+pub extend PrefixSums with Show::{to_string, output}
+
+///|
+pub extend PrefixSums with Spanning::{logical_length, span}
+
+///|
+pub extend PrefixSums with HasLength::{length, is_empty}

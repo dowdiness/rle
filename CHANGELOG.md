@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Breaking
+- Target MoonBit 0.10.15 and QuickCheck 0.15.0 only.
+- Rename `Rle::extend` and `Runs::extend` to `extend_from`: `extend` is now a reserved keyword. The arguments and in-place behavior are unchanged.
+- Move public shrinking implementations to `moonbitlang/core/quickcheck/shrink.Shrink`, matching QuickCheck 0.15.0.
+
+### Changed
+- Make existing implicit trait methods explicit, preserving method-call APIs without deprecated promotion.
+- Adopt current constructors, trait-qualified calls, generated interfaces, and formatter output.
+
+### Fixed
+- Select valid UTF-16 boundaries in string property tests so supplementary Unicode inputs exercise valid operations. Add deterministic Unicode boundary and shrinking regression tests; surrogate-pair rejection remains unchanged.
+
 ## [0.2.3] - 2026-06-23
 
 ### Changed

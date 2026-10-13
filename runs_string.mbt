@@ -15,7 +15,7 @@ pub impl Mergeable for String with fn merge(a : String, b : String) -> String {
 ///|
 /// String implements HasLength - length() is used by Spanning default
 /// logical_length() → span() → HasLength::length(), all returning UTF-16 code unit count
-pub impl HasLength for String with fn length(self : String) -> Int {
+pub impl HasLength for String with fn length(self : String) -> Int32 {
   self.length()
 }
 
@@ -23,7 +23,7 @@ pub impl HasLength for String with fn length(self : String) -> Int {
 /// String implements Spanning via defaults:
 /// span() → HasLength::length(), logical_length() → span()
 /// Both return UTF-16 code unit count.
-pub impl Spanning for String with fn span(self : String) -> Int {
+pub impl Spanning for String with fn span(self : String) -> Int32 {
   HasLength::length(self)
 }
 
@@ -40,8 +40,8 @@ pub impl Spanning for String with fn span(self : String) -> Int {
 /// A boundary on a high surrogate is valid (start of the character).
 pub fn slice_string_view(
   text : String,
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[String, SliceError] {
   let len = text.length()
   if start < 0 || end > len || start > end {
@@ -70,8 +70,8 @@ pub fn slice_string_view(
 /// String implements Sliceable via substring with UTF-16 boundary validation.
 pub impl Sliceable for String with fn slice(
   self : String,
-  start~ : Int,
-  end~ : Int,
+  start~ : Int32,
+  end~ : Int32,
 ) -> Result[String, RleError] {
   match slice_string_view(self, start~, end~) {
     Ok(value) => Ok(value)
@@ -93,7 +93,7 @@ pub fn Runs::from_string(text : String) -> Runs[String] {
 /// Concatenate all runs into single string
 pub fn Runs::to_string(self : Runs[String]) -> String {
   self.0
-  .fold(init=StringBuilder::new(), fn(sb, s) {
+  .fold(init=StringBuilder(), fn(sb, s) {
     sb.write_string(s)
     sb
   })
