@@ -33,10 +33,10 @@ pub type MayStale[T] = T?
 /// Create a new cursor after mutations to continue traversal.
 pub struct RleCursor[T] {
   rle : Rle[T]
-  version : Int // Captured version at cursor creation
-  mut run_index : Int
-  mut offset_in_run : Int
-  mut global_offset : Int
+  version : Int32 // Captured version at cursor creation
+  mut run_index : Int32
+  mut offset_in_run : Int32
+  mut global_offset : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -64,7 +64,7 @@ pub fn[T] RleCursor::is_stale(self : RleCursor[T]) -> Bool {
 
 ///|
 /// Current global position (returns None if stale)
-pub fn[T] RleCursor::position(self : RleCursor[T]) -> MayStale[Int] {
+pub fn[T] RleCursor::position(self : RleCursor[T]) -> MayStale[Int32] {
   if self.is_stale() {
     return None
   }
@@ -73,7 +73,7 @@ pub fn[T] RleCursor::position(self : RleCursor[T]) -> MayStale[Int] {
 
 ///|
 /// Current run and offset within it (returns None if stale)
-pub fn[T] RleCursor::current(self : RleCursor[T]) -> (T, Int)? {
+pub fn[T] RleCursor::current(self : RleCursor[T]) -> (T, Int32)? {
   if self.is_stale() || self.run_index >= self.rle.runs.0.length() {
     return None
   }
@@ -97,7 +97,7 @@ pub fn[T : Spanning] RleCursor::at_end(self : RleCursor[T]) -> Bool {
 
 ///|
 /// Advance by n positions (returns false if stale)
-pub fn[T : Spanning] RleCursor::advance(self : RleCursor[T], n : Int) -> Bool {
+pub fn[T : Spanning] RleCursor::advance(self : RleCursor[T], n : Int32) -> Bool {
   if self.is_stale() {
     return false
   }
@@ -132,7 +132,7 @@ pub fn[T : Spanning] RleCursor::advance(self : RleCursor[T], n : Int) -> Bool {
 
 ///|
 /// Retreat by n positions (returns false if stale)
-pub fn[T : Spanning] RleCursor::retreat(self : RleCursor[T], n : Int) -> Bool {
+pub fn[T : Spanning] RleCursor::retreat(self : RleCursor[T], n : Int32) -> Bool {
   if self.is_stale() {
     return false
   }
@@ -168,7 +168,7 @@ pub fn[T : Spanning] RleCursor::retreat(self : RleCursor[T], n : Int) -> Bool {
 ///|
 /// Seek to absolute position — O(log n) via `Rle::find` binary search.
 /// Returns false if stale or if `pos` is out of bounds.
-pub fn[T : Spanning] RleCursor::seek(self : RleCursor[T], pos : Int) -> Bool {
+pub fn[T : Spanning] RleCursor::seek(self : RleCursor[T], pos : Int32) -> Bool {
   if self.is_stale() {
     return false
   }
@@ -250,7 +250,7 @@ pub fn[T : Spanning] RleCursor::prev(self : RleCursor[T]) -> T? {
 /// the same run object with increasing offsets. Returns empty iterator if stale.
 pub fn[T : Spanning] RleCursor::iter_forward(
   self : RleCursor[T],
-) -> Iter[(T, Int, Int)] {
+) -> Iter[(T, Int32, Int32)] {
   if self.is_stale() {
     return Iter::empty()
   }
@@ -282,3 +282,12 @@ pub fn[T : Spanning] RleCursor::iter_forward(
     Some(result)
   })
 }
+
+///|
+pub extend RleCursor with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RleCursor with Eq::{not_equal, equal}
+
+///|
+pub extend RleCursor with Show::{to_string, output}

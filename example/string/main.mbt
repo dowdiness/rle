@@ -7,7 +7,7 @@ fn print_run_pos(pos : @rle.RunPos?) -> Unit {
 }
 
 ///|
-fn print_position(position : Int?) -> Unit {
+fn print_position(position : Int32?) -> Unit {
   match position {
     Some(position) => println("Some(\{position})")
     None => println("None")

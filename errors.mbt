@@ -46,8 +46,13 @@ pub impl Show for RangeIssue with fn output(self, logger) {
 ///|
 /// User-facing errors with context for friendly messages
 pub(all) suberror RleError {
-  PositionOutOfBounds(position~ : Int, length~ : Int)
-  InvalidRange(start~ : Int, end~ : Int, length~ : Int, reason~ : RangeIssue)
+  PositionOutOfBounds(position~ : Int32, length~ : Int32)
+  InvalidRange(
+    start~ : Int32,
+    end~ : Int32,
+    length~ : Int32,
+    reason~ : RangeIssue
+  )
   /// A slice failed to produce a valid value (e.g., invalid UTF-16 boundary).
   InvalidSlice(reason~ : SliceError)
   Internal(InternalError)
@@ -69,7 +74,7 @@ pub struct ErrorMessage {
 ///|
 /// Get a user-friendly message wrapper for this error
 pub fn RleError::message(self : RleError) -> ErrorMessage {
-  { error: self }
+  { error: self, }
 }
 
 ///|
@@ -108,3 +113,36 @@ pub impl Show for ErrorMessage with fn output(self, logger) {
       )
   }
 }
+
+///|
+pub extend InternalError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend InternalError with Show::{to_string, output}
+
+///|
+pub extend SliceError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SliceError with Eq::{not_equal, equal}
+
+///|
+pub extend SliceError with Show::{to_string, output}
+
+///|
+pub extend RangeIssue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RangeIssue with Eq::{not_equal, equal}
+
+///|
+pub extend RangeIssue with Show::{to_string, output}
+
+///|
+pub extend RleError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RleError with Show::{to_string, output}
+
+///|
+pub extend ErrorMessage with Show::{to_string, output}

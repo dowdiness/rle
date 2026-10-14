@@ -105,30 +105,30 @@ test "Rle clear invalidates cache" {
 }
 
 ///|
-test "Rle extend invalidates cache and bumps version" {
+test "Rle extend_from invalidates cache and bumps version" {
   let a = Rle::from_string("hello")
   let b = Rle::from_string(" world")
   let _ = a.span()
   inspect(a.prefix is Some(_), content="true")
   let old_version = a.version
-  a.extend(b)
+  a.extend_from(b)
   inspect(a.prefix is None, content="true")
   inspect(a.version > old_version, content="true")
 }
 
 ///|
-test "Rle extend with all-zero-span does not bump version" {
+test "Rle extend_from with all-zero-span does not bump version" {
   let a = Rle::from_string("hello")
   let _ = a.span() // build cache
   let old_version = a.version
   // Intentionally create invalid Runs with zero-span items via raw
   // constructor. This bypasses the normalization invariant (no adjacent
-  // mergeable, no zero-span) to test that Rle::extend's mutation
-  // detection correctly identifies the no-op case: Runs::extend skips
+  // mergeable, no zero-span) to test that Rle::extend_from's mutation
+  // detection correctly identifies the no-op case: Runs::extend_from skips
   // all zero-span items, so version and cache should be untouched.
   let zero_span_runs : Runs[String] = Runs(["", "", ""])
   let b : Rle[String] = Rle::from_runs(zero_span_runs)
-  a.extend(b)
+  a.extend_from(b)
   // Version should NOT bump — no actual mutation happened
   inspect(a.version == old_version, content="true")
   // Cache should NOT be invalidated
@@ -140,13 +140,13 @@ test "Rle extend with all-zero-span does not bump version" {
 ///|
 /// Whitebox test helper: index-carrying range for testing FromRange.
 priv struct WbRange {
-  start : Int
-  count : Int
+  start : Int32
+  count : Int32
 }
 
 ///|
 impl FromRange for WbRange with fn from_range(start, count) {
-  { start, count }
+  { start, count, }
 }
 
 ///|
@@ -166,7 +166,7 @@ impl Mergeable for WbRange with fn can_merge(a, b) {
 
 ///|
 impl Mergeable for WbRange with fn merge(a, b) {
-  { start: a.start, count: a.count + b.count }
+  { start: a.start, count: a.count + b.count, }
 }
 
 ///|

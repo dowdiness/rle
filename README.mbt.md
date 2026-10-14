@@ -178,7 +178,7 @@ test {
 test {
   // In-place extend — mutates the receiver
   let rle = @rle.Rle::from_string("hello")
-  rle.extend(@rle.Rle::from_string(" world"))
+  rle.extend_from(@rle.Rle::from_string(" world"))
   inspect(rle.to_string(), content="hello world")
 }
 ```

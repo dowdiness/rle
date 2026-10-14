@@ -208,10 +208,10 @@ test "Runs::concat merges adjacent" {
 }
 
 ///|
-test "Runs::extend merges in-place" {
+test "Runs::extend_from merges in-place" {
   let a = @rle.Runs::from_string("hello")
   let b = @rle.Runs::from_string(" world")
-  a.extend(b)
+  a.extend_from(b)
   inspect(a.length(), content="1")
   inspect(a.to_string(), content="hello world")
 }

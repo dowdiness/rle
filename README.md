@@ -4,6 +4,12 @@ Generic run-length encoded sequence for [MoonBit](https://www.moonbitlang.com/) 
 
 Adjacent elements that can be merged are automatically compressed into single runs, and a lazily-cached prefix sum index enables fast positional queries without scanning.
 
+## Compatibility
+
+This branch targets MoonBit 0.10.15 and QuickCheck 0.15.0. Earlier compiler versions are not supported.
+
+`Rle::extend` and `Runs::extend` were renamed to `extend_from` because `extend` is now a reserved keyword. Replace calls such as `a.extend(b)` with `a.extend_from(b)`; in-place mutation, boundary merging, cache invalidation, and cursor versioning are unchanged. Custom shrinking uses `moonbitlang/core/quickcheck/shrink.Shrink`.
+
 ## Install
 
 ```bash
@@ -130,7 +136,7 @@ c.to_string()  //=> "hello world"
 
 // In-place extend — mutates the receiver
 let rle = @rle.Rle::from_string("hello")
-rle.extend(@rle.Rle::from_string(" world"))
+rle.extend_from(@rle.Rle::from_string(" world"))
 rle.to_string()  //=> "hello world"
 ```
 
@@ -143,7 +149,7 @@ To use `Rle` with your own types, implement the required traits. The traits you 
 | Traits Implemented | Operations Unlocked |
 |--------------------|---------------------|
 | `HasLength` + `Spanning` | `find`, `span`, `logical_length`, `value_at`, `range`, `cursor` |
-| above + `Mergeable` | above + `append`, `concat`, `extend`, `from_array` |
+| above + `Mergeable` | above + `append`, `concat`, `extend_from`, `from_array` |
 | above + `Sliceable` | above + `split`, `insert`, `delete`, `splice` |
 
 Query operations (`find`, `range`, etc.) only need `Spanning`. You need `Mergeable` to construct and mutate sequences. You only need `Sliceable` for operations that cut a run in half (splitting at a position inside a run). In practice, most types implement all three since you need `Mergeable` to build an `Rle` in the first place.
@@ -257,7 +263,7 @@ The library exposes two main types:
 | `Runs[T]` | None | One-shot operations, managing your own prefix sums, or building blocks for custom structures |
 | `Rle[T]` | Lazy prefix sums | Repeated queries between mutations (typical usage) |
 
-`Rle[T]` wraps `Runs[T]` and caches prefix sums. After a mutation (append/extend/clear), the cache is invalidated. The next query (find/span/range) triggers a lazy O(n) rebuild. Multiple consecutive mutations pay zero rebuild cost.
+`Rle[T]` wraps `Runs[T]` and caches prefix sums. After a mutation (append/extend_from/clear), the cache is invalidated. The next query (find/span/range) triggers a lazy O(n) rebuild. Multiple consecutive mutations pay zero rebuild cost.
 
 For most users, **use `Rle[T]`**. Use `Runs[T]` directly only if you need fine-grained control over when prefix sums are built.
 
@@ -281,7 +287,7 @@ For most users, **use `Rle[T]`**. Use `Runs[T]` directly only if you need fine-g
 | `delete(start~, end~)` | O(n) | Delete range (new Rle) |
 | `splice(start~, end~, repl)` | O(n) | Replace range (new Rle) |
 | `concat(other)` | O(n) | Non-mutating concatenation (new Rle) |
-| `extend(other)` | O(m) | In-place extension |
+| `extend_from(other)` | O(m) | In-place extension |
 | `range(start~, end~)` | O(log n + k)* | Iterate slices in range |
 | `range_clamped(start~, end~)` | O(log n + k)* | Range with auto-clamped bounds |
 | `clear()` | O(1) | Remove all runs |
@@ -346,7 +352,7 @@ Splitting or slicing inside a surrogate pair returns `Err(InvalidSlice(InvalidIn
 
 Position lookups use binary search over cached prefix sums, giving O(log n) instead of O(n) linear scans. The cache is rebuilt lazily — only when queried after a mutation — so batch writes don't pay for repeated rebuilds.
 
-**Write-optimized design**: mutations (append, extend) are O(1) amortized and never trigger prefix sum rebuilds. Reads (find, span, range) pay the cost of rebuilding when needed. This fits workloads where mutations happen frequently and queries happen periodically (e.g., text editors, CRDT sync).
+**Write-optimized design**: mutations (append, extend_from) are O(1) amortized and never trigger prefix sum rebuilds. Reads (find, span, range) pay the cost of rebuilding when needed. This fits workloads where mutations happen frequently and queries happen periodically (e.g., text editors, CRDT sync).
 
 Run benchmarks with:
 

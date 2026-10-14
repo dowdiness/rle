@@ -3,7 +3,7 @@ name = "dowdiness/rle"
 version = "0.2.3"
 
 import {
-  "moonbitlang/quickcheck@0.14.0",
+  "moonbitlang/quickcheck@0.15.0",
 }
 
 readme = "README.md"

@@ -4,8 +4,8 @@
 
 ///|
 struct PixelRun {
-  color : Int
-  count : Int
+  color : Int32
+  count : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -15,33 +15,33 @@ impl @rle.Mergeable for PixelRun with fn can_merge(a : PixelRun, b : PixelRun) -
 
 ///|
 impl @rle.Mergeable for PixelRun with fn merge(a : PixelRun, b : PixelRun) -> PixelRun {
-  { color: a.color, count: a.count + b.count }
+  { color: a.color, count: a.count + b.count, }
 }
 
 ///|
-impl @rle.HasLength for PixelRun with fn length(self : PixelRun) -> Int {
+impl @rle.HasLength for PixelRun with fn length(self : PixelRun) -> Int32 {
   self.count
 }
 
 ///|
 /// span() delegates to length() here — both return pixel count.
 /// Override span() only when it should differ from length (e.g., CRDT tombstones).
-impl @rle.Spanning for PixelRun with fn span(self : PixelRun) -> Int {
+impl @rle.Spanning for PixelRun with fn span(self : PixelRun) -> Int32 {
   self.count
 }
 
 ///|
-let red : Int = 0xFF0000
+let red : Int32 = 0xFF0000
 
 ///|
-let green : Int = 0x00FF00
+let green : Int32 = 0x00FF00
 
 ///|
-let blue : Int = 0x0000FF
+let blue : Int32 = 0x0000FF
 
 ///|
-fn pixel(color : Int, count : Int) -> PixelRun {
-  { color, count }
+fn pixel(color : Int32, count : Int32) -> PixelRun {
+  { color, count, }
 }
 
 ///|
@@ -66,7 +66,7 @@ fn print_run_pos(pos : @rle.RunPos?) -> Unit {
 }
 
 ///|
-fn print_position(position : Int?) -> Unit {
+fn print_position(position : Int32?) -> Unit {
   match position {
     Some(position) => println("Some(\{position})")
     None => println("None")

@@ -17,7 +17,7 @@ pub impl @quickcheck.Arbitrary for Runs[String] with fn arbitrary(
   for _ in 0..<num_runs {
     // Each run has 1 to 5 characters
     let run_len = random_state.split().next_uint64().to_int().abs() % 5 + 1
-    let sb = StringBuilder::new()
+    let sb = StringBuilder()
     for _ in 0..<run_len {
       let char_idx = random_state.split().next_uint64().to_int().abs() %
         chars.length()
@@ -38,7 +38,7 @@ pub impl @quickcheck.Arbitrary for Runs[String] with fn arbitrary(
 /// 1. Remove runs (fewer runs = simpler)
 /// 2. Shorten individual runs
 /// 3. Simplify characters (later chars -> earlier chars)
-pub impl @qc.Shrink for Runs[String] with fn shrink(runs) {
+pub impl @shrink.Shrink for Runs[String] with fn shrink(runs) {
   let results : Array[Runs[String]] = []
   let items = runs.to_array()
   let len = items.length()
@@ -111,8 +111,8 @@ pub impl @quickcheck.Arbitrary for Rle[String] with fn arbitrary(
 
 ///|
 /// Shrink instance for Rle[String] - delegates to Runs shrinking
-pub impl @qc.Shrink for Rle[String] with fn shrink(rle) {
-  @qc.Shrink::shrink(rle.to_runs()).map(Rle::from_runs)
+pub impl @shrink.Shrink for Rle[String] with fn shrink(rle) {
+  @shrink.Shrink::shrink(rle.to_runs()).map(Rle::from_runs)
 }
 
 ///|
@@ -120,26 +120,26 @@ pub impl @qc.Shrink for Rle[String] with fn shrink(rle) {
 pub impl @quickcheck.Arbitrary for RunPos with fn arbitrary(size, random_state) {
   let run = random_state.split().next_uint64().to_int().abs() % (size + 1)
   let offset = random_state.split().next_uint64().to_int().abs() % (size + 1)
-  { run, offset }
+  { run, offset, }
 }
 
 ///|
 /// Shrink instance for RunPos - shrinks both run and offset toward 0
-pub impl @qc.Shrink for RunPos with fn shrink(pos) {
+pub impl @shrink.Shrink for RunPos with fn shrink(pos) {
   let results : Array[RunPos] = []
   // Try (0, 0)
   if pos.run > 0 || pos.offset > 0 {
-    results.push({ run: 0, offset: 0 })
+    results.push({ run: 0, offset: 0, })
   }
   // Shrink run
   if pos.run > 0 {
-    results.push({ run: pos.run - 1, offset: pos.offset })
-    results.push({ run: pos.run / 2, offset: pos.offset })
+    results.push({ run: pos.run - 1, offset: pos.offset, })
+    results.push({ run: pos.run / 2, offset: pos.offset, })
   }
   // Shrink offset
   if pos.offset > 0 {
-    results.push({ run: pos.run, offset: pos.offset - 1 })
-    results.push({ run: pos.run, offset: pos.offset / 2 })
+    results.push({ run: pos.run, offset: pos.offset - 1, })
+    results.push({ run: pos.run, offset: pos.offset / 2, })
   }
   results.iter()
 }
@@ -152,8 +152,8 @@ pub impl @quickcheck.Arbitrary for PrefixSums with fn arbitrary(
 ) {
   let num_runs = random_state.split().next_uint64().to_int().abs() % (size + 1) +
     1
-  let spans : Array[Int] = []
-  let content : Array[Int] = []
+  let spans : Array[Int32] = []
+  let content : Array[Int32] = []
   let mut span_sum = 0
   let mut content_sum = 0
   for _ in 0..<num_runs {
@@ -163,17 +163,17 @@ pub impl @quickcheck.Arbitrary for PrefixSums with fn arbitrary(
     spans.push(span_sum)
     content.push(content_sum)
   }
-  { spans, content }
+  { spans, content, }
 }
 
 ///|
 /// Shrink instance for PrefixSums - shrinks by removing entries
-pub impl @qc.Shrink for PrefixSums with fn shrink(sums) {
+pub impl @shrink.Shrink for PrefixSums with fn shrink(sums) {
   let results : Array[PrefixSums] = []
   let len = sums.spans.length()
   // Try empty
   if len > 0 {
-    results.push({ spans: [], content: [] })
+    results.push({ spans: [], content: [], })
   }
   // Remove last entry
   if len > 1 {
@@ -201,7 +201,7 @@ pub impl @quickcheck.Arbitrary for Slice[String] with fn arbitrary(
 ) {
   let chars : Array[Char] = ['a', 'b', 'c', 'd', 'e']
   let len = random_state.split().next_uint64().to_int().abs() % (size + 1) + 1
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for _ in 0..<len {
     let char_idx = random_state.split().next_uint64().to_int().abs() %
       chars.length()
@@ -213,30 +213,60 @@ pub impl @quickcheck.Arbitrary for Slice[String] with fn arbitrary(
   let end = start +
     random_state.split().next_uint64().to_int().abs() % (value_len - start) +
     1
-  { value, start, end }
+  { value, start, end, }
 }
 
 ///|
 /// Shrink instance for Slice[String] - shrinks value and narrows range
-pub impl @qc.Shrink for Slice[String] with fn shrink(slice) {
+pub impl @shrink.Shrink for Slice[String] with fn shrink(slice) {
   let results : Array[Slice[String]] = []
   let value_len = Spanning::span(slice.value)
   // Shrink to smaller range
   if slice.end > slice.start + 1 {
-    results.push({ ..slice, end: slice.start + 1 })
-    results.push({ ..slice, end: (slice.start + slice.end) / 2 + 1 })
+    results.push({ ..slice, end: slice.start + 1, })
+    results.push({ ..slice, end: (slice.start + slice.end) / 2 + 1, })
   }
   // Shrink start toward 0
   if slice.start > 0 {
-    results.push({ ..slice, start: 0 })
+    results.push({ ..slice, start: 0, })
   }
   // Shrink value (keep range valid)
   if value_len > slice.end {
     match Sliceable::slice(slice.value, start=0, end=slice.end) {
       Ok(new_value) =>
-        results.push({ value: new_value, start: slice.start, end: slice.end })
+        results.push({ value: new_value, start: slice.start, end: slice.end, })
       Err(_) => ()
     }
   }
   results.iter()
 }
+
+///|
+pub extend Runs with @moonbitlang/core/quickcheck.Arbitrary::{arbitrary}
+
+///|
+pub extend Runs with @moonbitlang/core/quickcheck/shrink.Shrink::{shrink}
+
+///|
+pub extend Rle with @moonbitlang/core/quickcheck.Arbitrary::{arbitrary}
+
+///|
+pub extend Rle with @moonbitlang/core/quickcheck/shrink.Shrink::{shrink}
+
+///|
+pub extend RunPos with @moonbitlang/core/quickcheck.Arbitrary::{arbitrary}
+
+///|
+pub extend RunPos with @moonbitlang/core/quickcheck/shrink.Shrink::{shrink}
+
+///|
+pub extend PrefixSums with @moonbitlang/core/quickcheck.Arbitrary::{arbitrary}
+
+///|
+pub extend PrefixSums with @moonbitlang/core/quickcheck/shrink.Shrink::{shrink}
+
+///|
+pub extend Slice with @moonbitlang/core/quickcheck.Arbitrary::{arbitrary}
+
+///|
+pub extend Slice with @moonbitlang/core/quickcheck/shrink.Shrink::{shrink}

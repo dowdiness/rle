@@ -31,7 +31,7 @@ Core library lives in `src/` (package `dowdiness/rle`). Example sub-packages und
 **Layering is strict and bottom-up.** Dependencies flow downward only:
 Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No upward or circular deps.
 
-**Runs invariant: no adjacent mergeable runs.** Every mutation must restore this via `normalize_tail()` (append) or stack-merge loop (concat/extend/from_array_batch). Never mutate the internal array without normalization.
+**Runs invariant: no adjacent mergeable runs.** Every mutation must restore this via `normalize_tail()` (append) or stack-merge loop (concat/extend_from/from_array_batch). Never mutate the internal array without normalization.
 
 **Rle mutations must invalidate + version-bump.** Always call both `self.invalidate()` and `self.bump_version()`. Omitting either breaks cache consistency or cursor staleness detection.
 
@@ -43,13 +43,13 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 ## Known Mistakes
 
-**Breaking merge cascade.** Don't add early returns before `normalize_tail()` or reorder the pop-merge-push loop. After changes to append/concat/extend/from_array_batch, run whitebox tests (`runs_wbtest.mbt`).
+**Breaking merge cascade.** Don't add early returns before `normalize_tail()` or reorder the pop-merge-push loop. After changes to append/concat/extend_from/from_array_batch, run whitebox tests (`runs_wbtest.mbt`).
 
 **Forgetting bump_version.** Every `invalidate()` call must pair with `bump_version()`. Copy the pattern from `append()`.
 
 **String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. `slice_string_view` validates bounds and surrogate pair boundaries, returning `SliceError::InvalidIndex` for mid-pair cuts. Test with "😀" (2 units) and "A😀B" (4 units).
 
-**Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend silently skip.
+**Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend_from silently skip.
 
 **Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `span()`, `logical_length()`, `range()`.
 
