@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-26
+
 ### Breaking
 - Target MoonBit 0.10.15 and QuickCheck 0.15.0 only.
 - Rename `Rle::extend` and `Runs::extend` to `extend_from`: `extend` is now a reserved keyword. The arguments and in-place behavior are unchanged.
