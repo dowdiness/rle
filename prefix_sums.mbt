@@ -11,10 +11,11 @@
 ///
 /// The library caches this inside `Rle` (as `prefix: PrefixSums?`). The cache
 /// is set to `None` on mutation and rebuilt lazily on the next query.
+#derive(Debug, Eq)
 pub(all) struct PrefixSums {
   spans : Array[Int32] // cumulative span lengths
   content : Array[Int32] // cumulative content lengths
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl Show for PrefixSums with fn output(self, logger) {

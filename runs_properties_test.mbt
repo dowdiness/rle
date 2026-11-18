@@ -36,14 +36,9 @@ fn prop_slice_merge_roundtrip(text : String) -> Bool {
     return true
   }
   let k = boundary_at_or_before(text, len / 2)
-  match @rle.Sliceable::slice(text, start=0, end=k) {
-    Ok(left) =>
-      match @rle.Sliceable::slice(text, start=k, end=len) {
-        Ok(right) => @rle.Mergeable::merge(left, right) == text
-        Err(_) => false
-      }
-    Err(_) => false
-  }
+  let left = try! @rle.Sliceable::slice(text, start=0, end=k)
+  let right = try! @rle.Sliceable::slice(text, start=k, end=len)
+  @rle.Mergeable::merge(left, right) == text
 }
 
 ///|
@@ -77,10 +72,8 @@ test "property: logical_length <= span" {
 /// Property: full slice equals original
 fn prop_full_slice_identity(text : String) -> Bool {
   let len = @rle.Spanning::span(text)
-  match @rle.Sliceable::slice(text, start=0, end=len) {
-    Ok(value) => value == text
-    Err(_) => false
-  }
+  let value = try! @rle.Sliceable::slice(text, start=0, end=len)
+  value == text
 }
 
 ///|
@@ -117,10 +110,8 @@ fn prop_split_preserves_len(text : String) -> Bool {
     return true
   }
   let k = boundary_at_or_before(text, total / 2)
-  match runs.split(k) {
-    Ok((left, right)) => left.span() + right.span() == total
-    Err(_) => false
-  }
+  let (left, right) = try! runs.split(k)
+  left.span() + right.span() == total
 }
 
 ///|
@@ -179,10 +170,8 @@ fn prop_split_concat_roundtrip(text : String) -> Bool {
   }
   let rle = @rle.Rle::from_string(text)
   let mid = boundary_at_or_before(text, len / 2)
-  match rle.split(mid) {
-    Ok((left, right)) => left.concat(right).to_string() == text
-    Err(_) => false
-  }
+  let (left, right) = try! rle.split(mid)
+  left.concat(right).to_string() == text
 }
 
 ///|
@@ -196,10 +185,7 @@ fn prop_no_adjacent_mergeable(strings : Array[String]) -> Bool {
   let runs : @rle.Runs[String] = @rle.Runs::new()
   for s in strings {
     if s.iter().count() > 0 {
-      match runs.append(s) {
-        Ok(_) => ()
-        Err(_) => return false
-      }
+      try! runs.append(s)
     }
   }
   let items = runs.to_array()
@@ -226,20 +212,14 @@ fn prop_range_coverage(text : String) -> Bool {
   let rle = @rle.Rle::from_string(text)
   let start = boundary_at_or_before(text, 1)
   let end = boundary_at_or_before(text, len - 1)
-  match rle.range(start~, end~) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      let mut total_len = 0
-      for slice in slices {
-        match slice.to_inner() {
-          Ok(value) => total_len = total_len + @rle.Spanning::span(value)
-          Err(_) => return false
-        }
-      }
-      total_len == end - start
-    }
-    Err(_) => false
+  let iter = try! rle.range(start~, end~)
+  let slices = iter.collect()
+  let mut total_len = 0
+  for slice in slices {
+    let value = try! slice.to_inner()
+    total_len = total_len + @rle.Spanning::span(value)
   }
+  total_len == end - start
 }
 
 ///|
@@ -290,16 +270,12 @@ fn prop_insert_preserves_len(pair : (String, String)) -> Bool {
   let elem = @rle.Rle::from_string(elem_text)
   let total = rle.span()
   if total == 0 {
-    match rle.insert(0, elem) {
-      Ok(result) => result.span() == elem.span()
-      Err(_) => false
-    }
+    let result = try! rle.insert(0, elem)
+    result.span() == elem.span()
   } else {
     let pos = boundary_at_or_before(text, total / 2)
-    match rle.insert(pos, elem) {
-      Ok(result) => result.span() == total + elem.span()
-      Err(_) => false
-    }
+    let result = try! rle.insert(pos, elem)
+    result.span() == total + elem.span()
   }
 }
 
@@ -318,10 +294,8 @@ fn prop_delete_preserves_len(text : String) -> Bool {
   }
   let start = boundary_at_or_before(text, total / 4)
   let end = boundary_at_or_before(text, total / 4 + total / 2)
-  match rle.delete(start~, end~) {
-    Ok(result) => result.span() == total - (end - start)
-    Err(_) => false
-  }
+  let result = try! rle.delete(start~, end~)
+  result.span() == total - (end - start)
 }
 
 ///|
@@ -341,10 +315,8 @@ fn prop_splice_preserves_len(pair : (String, String)) -> Bool {
   }
   let start = boundary_at_or_before(text, total / 4)
   let end = boundary_at_or_before(text, total / 4 + total / 2)
-  match rle.splice(start~, end~, replacement) {
-    Ok(result) => result.span() == total - (end - start) + replacement.span()
-    Err(_) => false
-  }
+  let result = try! rle.splice(start~, end~, replacement)
+  result.span() == total - (end - start) + replacement.span()
 }
 
 ///|
@@ -365,21 +337,15 @@ fn prop_splice_equals_delete_insert(pair : (String, String)) -> Bool {
   let replacement = @rle.Rle::from_string(replacement_text)
   // splice approach
   let rle1 = @rle.Rle::from_string(text)
-  let splice_result = match rle1.splice(start~, end~, replacement) {
-    Ok(r) => r.to_string()
-    Err(_) => return false
-  }
+  let splice_result = try! rle1.splice(start~, end~, replacement)
   // delete then insert approach
   let rle2 = @rle.Rle::from_string(text)
-  let delete_insert_result = match rle2.delete(start~, end~) {
-    Ok(deleted) =>
-      match deleted.insert(start, @rle.Rle::from_string(replacement_text)) {
-        Ok(r) => r.to_string()
-        Err(_) => return false
-      }
-    Err(_) => return false
-  }
-  splice_result == delete_insert_result
+  let deleted = try! rle2.delete(start~, end~)
+  let delete_insert_result = try! deleted.insert(
+    start,
+    @rle.Rle::from_string(replacement_text),
+  )
+  splice_result.to_string() == delete_insert_result.to_string()
 }
 
 ///|

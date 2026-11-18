@@ -25,11 +25,12 @@
 /// mutations — the cached prefix sums make these O(log n) or O(1).
 /// Use `Runs` directly for one-shot operations or when you manage your own
 /// `PrefixSums` via `Runs::prefix_sums()` and `Runs::find_fast()`.
+#derive(Debug, Eq)
 pub struct Rle[T] {
   runs : Runs[T]
   mut prefix : PrefixSums? // None = stale, needs rebuild
   mut version : Int32 // Monotonically increasing mutation counter
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl[T : Debug] Show for Rle[T] with fn output(self, logger) {
@@ -249,17 +250,14 @@ pub impl[T : Spanning] Spanning for Rle[T] with fn logical_length(self : Rle[T])
 
 ///|
 /// Append element - invalidates cache and bumps version
+/// Raises `RleError::Internal(EmptyElement)` for non-positive spans without
+/// changing the contents, cache, or mutation version.
 pub fn[T : Mergeable + Spanning] Rle::append(
   self : Rle[T],
   elem : T,
-) -> Result[Unit, RleError] {
-  match self.runs.append(elem) {
-    Ok(_) => {
-      self.mark_mutated()
-      Ok(())
-    }
-    Err(e) => Err(e)
-  }
+) -> Unit raise RleError {
+  self.runs.append(elem)
+  self.mark_mutated()
 }
 
 ///|
@@ -281,14 +279,11 @@ pub fn[T : Spanning] Rle::range(
   self : Rle[T],
   start~ : Int32,
   end~ : Int32,
-) -> Result[Iter[Slice[T]], RleError] {
+) -> Iter[Slice[T]] raise RleError {
   let sums = self.ensure_prefix()
   let total = sums.span()
-  match range_check(start, end, total) {
-    Ok(_) => ()
-    Err(e) => return Err(e)
-  }
-  Ok(self.range_unchecked(sums, start~, end~))
+  range_check(start, end, total)
+  self.range_unchecked(sums, start~, end~)
 }
 
 ///|
@@ -346,15 +341,13 @@ pub fn[T : Spanning] Rle::range_clamped(
 }
 
 ///|
-/// Split at position - invalidates cache
+/// Split at position, returning two new Rle wrappers without mutating self.
 pub fn[T : Sliceable + Spanning + Mergeable] Rle::split(
   self : Rle[T],
   pos : Int32,
-) -> Result[(Rle[T], Rle[T]), RleError] {
-  match self.runs.split(pos) {
-    Ok((left, right)) => Ok((Rle::from_runs(left), Rle::from_runs(right)))
-    Err(e) => Err(e)
-  }
+) -> (Rle[T], Rle[T]) raise RleError {
+  let (left, right) = self.runs.split(pos)
+  (Rle::from_runs(left), Rle::from_runs(right))
 }
 
 ///|
@@ -405,31 +398,27 @@ pub fn[T : Mergeable + Spanning] Rle::extend_from(
 pub fn[T : Spanning] Rle::value_at(
   self : Rle[T],
   pos : Int32,
-) -> Result[T, RleError] {
+) -> T raise RleError {
   let sums = self.ensure_prefix()
   let total = sums.span()
   if pos < 0 || pos >= total {
-    return Err(RleError::PositionOutOfBounds(position=pos, length=total))
+    raise RleError::PositionOutOfBounds(position=pos, length=total)
   }
   match self.runs.find_fast(sums, pos) {
     Some(rp) =>
       match self.runs.get(rp.run) {
-        Some(value) => Ok(value)
+        Some(value) => value
         None =>
-          Err(
-            RleError::Internal(
-              InternalError::InvalidState(
-                detail="find returned invalid run index",
-              ),
+          raise RleError::Internal(
+            InternalError::InvalidState(
+              detail="find returned invalid run index",
             ),
           )
       }
     None =>
-      Err(
-        RleError::Internal(
-          InternalError::InvalidState(
-            detail="find returned None for valid position",
-          ),
+      raise RleError::Internal(
+        InternalError::InvalidState(
+          detail="find returned None for valid position",
         ),
       )
   }
@@ -441,11 +430,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::insert(
   self : Rle[T],
   pos : Int32,
   elem : Rle[T],
-) -> Result[Rle[T], RleError] {
-  match self.runs.insert(pos, elem.runs) {
-    Ok(runs) => Ok(Rle::from_runs(runs))
-    Err(e) => Err(e)
-  }
+) -> Rle[T] raise RleError {
+  Rle::from_runs(self.runs.insert(pos, elem.runs))
 }
 
 ///|
@@ -454,11 +440,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::delete(
   self : Rle[T],
   start~ : Int32,
   end~ : Int32,
-) -> Result[Rle[T], RleError] {
-  match self.runs.delete(start~, end~) {
-    Ok(runs) => Ok(Rle::from_runs(runs))
-    Err(e) => Err(e)
-  }
+) -> Rle[T] raise RleError {
+  Rle::from_runs(self.runs.delete(start~, end~))
 }
 
 ///|
@@ -468,11 +451,8 @@ pub fn[T : Sliceable + Spanning + Mergeable] Rle::splice(
   start~ : Int32,
   end~ : Int32,
   replacement : Rle[T],
-) -> Result[Rle[T], RleError] {
-  match self.runs.splice(start~, end~, replacement.runs) {
-    Ok(runs) => Ok(Rle::from_runs(runs))
-    Err(e) => Err(e)
-  }
+) -> Rle[T] raise RleError {
+  Rle::from_runs(self.runs.splice(start~, end~, replacement.runs))
 }
 
 ///|

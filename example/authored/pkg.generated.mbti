@@ -10,7 +10,8 @@ import {
 // Errors
 
 // Types and methods
-type AuthoredRun derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type AuthoredRun
 
 // Type aliases
 

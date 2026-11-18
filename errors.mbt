@@ -2,10 +2,11 @@
 
 ///|
 /// Internal invariant violations - indicates bugs, not user errors
+#derive(Debug)
 pub(all) suberror InternalError {
   EmptyElement // Attempted to add element with span == 0
   InvalidState(detail~ : String)
-} derive(Debug)
+}
 
 ///|
 pub impl Show for InternalError with fn output(self, logger) {
@@ -17,12 +18,13 @@ pub impl Show for InternalError with fn output(self, logger) {
 ///
 /// These are raised when a slice lands outside the valid bounds or splits a
 /// UTF-16 surrogate pair (string slicing is done in code units).
+#derive(Debug, Eq)
 pub(all) suberror SliceError {
   /// Start/end fall outside the run bounds.
   IndexOutOfBounds
   /// Start/end split a UTF-16 surrogate pair.
   InvalidIndex
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl Show for SliceError with fn output(self, logger) {
@@ -31,12 +33,13 @@ pub impl Show for SliceError with fn output(self, logger) {
 
 ///|
 /// Why a range is invalid
+#derive(Debug, Eq)
 pub enum RangeIssue {
   NegativeStart
   NegativeEnd
   StartAfterEnd
   ExceedsLength
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl Show for RangeIssue with fn output(self, logger) {
@@ -45,18 +48,19 @@ pub impl Show for RangeIssue with fn output(self, logger) {
 
 ///|
 /// User-facing errors with context for friendly messages
+#derive(Debug)
 pub(all) suberror RleError {
   PositionOutOfBounds(position~ : Int32, length~ : Int32)
   InvalidRange(
     start~ : Int32,
     end~ : Int32,
     length~ : Int32,
-    reason~ : RangeIssue
+    reason~ : RangeIssue,
   )
   /// A slice failed to produce a valid value (e.g., invalid UTF-16 boundary).
   InvalidSlice(reason~ : SliceError)
   Internal(InternalError)
-} derive(Debug)
+}
 
 ///|
 pub impl Show for RleError with fn output(self, logger) {

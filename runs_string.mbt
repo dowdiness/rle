@@ -42,10 +42,10 @@ pub fn slice_string_view(
   text : String,
   start~ : Int32,
   end~ : Int32,
-) -> Result[String, SliceError] {
+) -> String raise SliceError {
   let len = text.length()
   if start < 0 || end > len || start > end {
-    return Err(SliceError::IndexOutOfBounds)
+    raise SliceError::IndexOutOfBounds
   }
   if (
       start < len &&
@@ -61,9 +61,9 @@ pub fn slice_string_view(
         cu >= 0xDC00 && cu <= 0xDFFF
       })
     ) {
-    return Err(SliceError::InvalidIndex)
+    raise SliceError::InvalidIndex
   }
-  Ok(text[start:end].to_owned())
+  text[start:end].to_owned()
 }
 
 ///|
@@ -72,10 +72,9 @@ pub impl Sliceable for String with fn slice(
   self : String,
   start~ : Int32,
   end~ : Int32,
-) -> Result[String, RleError] {
-  match slice_string_view(self, start~, end~) {
-    Ok(value) => Ok(value)
-    Err(err) => Err(RleError::InvalidSlice(reason=err))
+) -> String raise RleError {
+  slice_string_view(self, start~, end~) catch {
+    err => raise RleError::InvalidSlice(reason=err)
   }
 }
 

@@ -32,8 +32,8 @@ Append merges automatically (strings always merge into one run):
 ///|
 test {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  let _ = rle.append("hello")
-  let _ = rle.append(" world")
+  rle.append("hello")
+  rle.append(" world")
   inspect(rle.length(), content="1")
   inspect(rle.to_string(), content="hello world")
 }
@@ -45,7 +45,7 @@ Split at any position:
 ///|
 test {
   let rle = @rle.Rle::from_string("hello world")
-  let (left, right) = rle.split(5).unwrap()
+  let (left, right) = rle.split(5)
   inspect(left.to_string(), content="hello")
   inspect(right.to_string(), content=" world")
 }
@@ -57,13 +57,9 @@ Range iteration returns lazy slices without copying:
 ///|
 test {
   let rle = @rle.Rle::from_string("hello world")
-  let slices = rle.range(start=1, end=4).unwrap().collect()
+  let slices = rle.range(start=1, end=4).collect()
   inspect(slices.length(), content="1")
-  let s = slices[0]
-  match @rle.Sliceable::slice(s.value, start=s.start, end=s.end) {
-    Ok(value) => inspect(value, content="ell")
-    Err(_) => fail("slice should succeed")
-  }
+  inspect(slices[0].to_inner(), content="ell")
 }
 ```
 
@@ -90,7 +86,7 @@ test {
   // Insert at position
   let rle = @rle.Rle::from_string("helo")
   let elem = @rle.Rle::from_string("l")
-  let result = rle.insert(2, elem).unwrap()
+  let result = rle.insert(2, elem)
   inspect(result.to_string(), content="hello")
 }
 ```
@@ -100,7 +96,7 @@ test {
 test {
   // Delete a range
   let rle = @rle.Rle::from_string("hello world")
-  let result = rle.delete(start=5, end=6).unwrap()
+  let result = rle.delete(start=5, end=6)
   inspect(result.to_string(), content="helloworld")
 }
 ```
@@ -111,7 +107,7 @@ test {
   // Splice: replace a range with new content
   let rle = @rle.Rle::from_string("hello world")
   let replacement = @rle.Rle::from_string("beautiful ")
-  let result = rle.splice(start=6, end=11, replacement).unwrap()
+  let result = rle.splice(start=6, end=11, replacement)
   inspect(result.to_string(), content="hello beautiful ")
 }
 ```
@@ -154,7 +150,7 @@ test {
   let cursor = rle.cursor()
   let _ = cursor.advance(3)
 
-  let _ = rle.append("ghi")
+  rle.append("ghi")
   inspect(cursor.is_stale(), content="true")
   inspect(cursor.next() is None, content="true")
 }
@@ -216,11 +212,9 @@ test {
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  match rle.value_at(2) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at should succeed")
-  }
-  inspect(rle.value_at(5) is Err(_), content="true")
+  inspect(rle.value_at(2), content="hello")
+  // Invalid positions raise RleError; optional lookup remains available via find.
+  inspect(rle.find(5) is None, content="true")
 }
 ```
 
@@ -247,7 +241,7 @@ Prefix sums are rebuilt lazily — mutations invalidate the cache, queries rebui
 test {
   let rle = @rle.Rle::from_string("hello")
   let _ = rle.span() // builds cache
-  let _ = rle.append(" world") // invalidates cache
+  rle.append(" world") // invalidates cache
   // next query rebuilds automatically
   inspect(rle.span(), content="11")
 }
@@ -262,9 +256,9 @@ The version counter increments on every mutation:
 test {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
   inspect(rle.get_version(), content="0")
-  let _ = rle.append("a")
+  rle.append("a")
   inspect(rle.get_version(), content="1")
-  let _ = rle.append("b")
+  rle.append("b")
   inspect(rle.get_version(), content="2")
   rle.clear()
   inspect(rle.get_version(), content="3")
@@ -273,58 +267,43 @@ test {
 
 ## Error Handling
 
-Operations return `Result[T, RleError]` with user-friendly messages:
+Fallible operations raise `RleError` directly. They propagate automatically to a
+caller that can raise, or can be handled with typed `try`/`catch`. Optional
+lookups such as `find`, `get`, and cursor access remain `Option`-based.
+
+Successful calls need no `Result` matching or unwrap:
 
 ```mbt check
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  match rle.split(100) {
-    Ok(_) => fail("should fail")
-    Err(e) =>
+  let (left, right) = rle.split(2)
+  inspect(left.to_string(), content="he")
+  inspect(right.to_string(), content="llo")
+}
+```
+
+Handle a specific error variant with `catch`:
+
+```mbt check
+///|
+test {
+  let rle = @rle.Rle::from_string("hello")
+  try rle.split(100) catch {
+    @rle.RleError::PositionOutOfBounds(position~, length~) =>
       inspect(
-        e.message(),
+        "Position \{position} is outside the document (length: \{length})",
         content="Position 100 is outside the document (length: 5)",
       )
+    error => raise error
+  } noraise {
+    _ => fail("expected an out-of-bounds error")
   }
 }
 ```
 
-Range validation provides specific reasons:
-
-```mbt check
-///|
-test {
-  let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=-1, end=3) {
-    Ok(_) => fail("should fail")
-    Err(e) =>
-      inspect(e.message(), content="Range start (-1) cannot be negative")
-  }
-}
-```
-
-```mbt check
-///|
-test {
-  let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=0, end=10) {
-    Ok(_) => fail("should fail")
-    Err(e) =>
-      inspect(e.message(), content="Range end (10) exceeds document length (5)")
-  }
-}
-```
-
-Appending an empty string returns an error:
-
-```mbt check
-///|
-test {
-  let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  inspect(rle.append("") is Err(_), content="true")
-}
-```
+Invalid ranges raise `RleError::InvalidRange`; an empty append raises an
+`InternalError` wrapped by `RleError::Internal`.
 
 ## UTF-16 String Indices
 
@@ -338,17 +317,22 @@ test {
 }
 ```
 
-Splitting inside a surrogate pair returns an error:
+Splitting inside a surrogate pair raises an error:
 
 ```mbt check
 ///|
 test {
   let rle = @rle.Rle::from_string("😀")
   inspect(rle.span(), content="2")
-  match rle.split(1) {
-    Ok(_) => fail("should fail on invalid boundary")
-    Err(e) =>
-      inspect(e.message(), content="Slice indices are not on valid boundaries")
+  try rle.split(1) catch {
+    @rle.RleError::InvalidSlice(reason=@rle.SliceError::InvalidIndex) =>
+      inspect(
+        "Slice indices are not on valid boundaries",
+        content="Slice indices are not on valid boundaries",
+      )
+    error => raise error
+  } noraise {
+    _ => fail("expected an invalid UTF-16 boundary error")
   }
 }
 ```
@@ -360,13 +344,8 @@ Valid emoji boundaries work correctly:
 test {
   let rle = @rle.Rle::from_string("A😀B")
   // Position 3 is after the emoji, before B — valid boundary
-  match rle.range(start=0, end=3) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = rle.range(start=0, end=3).collect()
+  inspect(slices.length(), content="1")
 }
 ```
 
@@ -386,13 +365,9 @@ test {
     }
     None => fail("find should succeed")
   }
-  match rle.split(1) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="こ")
-      inspect(right.to_string(), content="んにちは")
-    }
-    Err(_) => fail("split should work with unicode")
-  }
+  let (left, right) = rle.split(1)
+  inspect(left.to_string(), content="こ")
+  inspect(right.to_string(), content="んにちは")
 }
 ```
 
@@ -404,10 +379,8 @@ Empty range (start == end) is valid and returns empty iterator:
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=2, end=2) {
-    Ok(iter) => inspect(iter.collect().length(), content="0")
-    Err(_) => fail("empty range should succeed")
-  }
+  let iter = rle.range(start=2, end=2)
+  inspect(iter.collect().length(), content="0")
 }
 ```
 
@@ -417,10 +390,8 @@ Delete empty range is a no-op:
 ///|
 test {
   let rle = @rle.Rle::from_string("hello")
-  match rle.delete(start=2, end=2) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("delete empty range should succeed")
-  }
+  let result = rle.delete(start=2, end=2)
+  inspect(result.to_string(), content="hello")
 }
 ```
 
@@ -431,7 +402,7 @@ Split at boundaries:
 test {
   let rle = @rle.Rle::from_string("hello")
   // Split at start
-  let (left, right) = rle.split(0).unwrap()
+  let (left, right) = rle.split(0)
   inspect(left.to_string(), content="")
   inspect(right.to_string(), content="hello")
 }
@@ -442,7 +413,7 @@ test {
 test {
   let rle = @rle.Rle::from_string("hello")
   // Split at end
-  let (left, right) = rle.split(5).unwrap()
+  let (left, right) = rle.split(5)
   inspect(left.to_string(), content="hello")
   inspect(right.to_string(), content="")
 }
@@ -459,9 +430,9 @@ test {
   let slices = rle.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
   let s = slices[0]
-  match @rle.Sliceable::slice(s.value, start=s.start, end=s.end) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("slice should succeed")
-  }
+  inspect(
+    @rle.Sliceable::slice(s.value, start=s.start, end=s.end),
+    content="hello",
+  )
 }
 ```

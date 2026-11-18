@@ -44,14 +44,17 @@ pub(open) trait Mergeable {
 /// Indices are in the same units as `span()` (e.g., UTF-16 code units for
 /// strings, pixel count for pixel runs).
 ///
+/// Invalid bounds or boundaries raise `RleError`. Implementations must
+/// propagate failures rather than return a partial slice.
+///
 /// ## String Warning
 ///
 /// For `String`, indices are **UTF-16 code units**, not Unicode codepoints.
 /// Emoji like "😀" occupy 2 code units (a surrogate pair). Slicing at an
-/// index inside a surrogate pair returns `Err(InvalidSlice(InvalidIndex))`.
+/// index inside a surrogate pair raises `RleError::InvalidSlice(InvalidIndex)`.
 /// Always slice on valid character boundaries.
 pub(open) trait Sliceable {
-  fn slice(Self, start~ : Int32, end~ : Int32) -> Result[Self, RleError]
+  fn slice(Self, start~ : Int32, end~ : Int32) -> Self raise RleError
 }
 
 ///|

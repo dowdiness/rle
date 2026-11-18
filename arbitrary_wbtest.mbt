@@ -22,5 +22,5 @@ test "core Shrink remains available for every RLE test data type" {
   assert_eq(smaller_sums.map(s => s.spans), [[], [1, 3], [1]])
   let slice : Slice[String] = { value: "abc", start: 0, end: 3, }
   let smaller_slices = @shrink.Shrink::shrink(slice).collect()
-  assert_true(smaller_slices.map(s => s.to_inner()) is [Ok("a"), Ok("ab")])
+  assert_true(smaller_slices.map(s => try! s.to_inner()) is ["a", "ab"])
 }

@@ -24,8 +24,8 @@ test "Runs::from_string with empty string" {
 ///|
 test "Runs::append merges adjacent runs" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
-  let _ = runs.append("hello")
-  let _ = runs.append(" world")
+  runs.append("hello")
+  runs.append(" world")
   inspect(runs.length(), content="1")
   inspect(runs.to_string(), content="hello world")
 }
@@ -33,8 +33,9 @@ test "Runs::append merges adjacent runs" {
 ///|
 test "Runs::append rejects empty element" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
-  let result = runs.append("")
+  let result = Ok(runs.append("")) catch { error => Err(error) }
   @debug.debug_inspect(result, content="Err(Internal(EmptyElement))")
+  inspect(runs.to_string(), content="")
 }
 
 ///|
@@ -85,51 +86,30 @@ test "Runs::find at boundaries" {
 ///|
 test "Runs::range full range" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.range(start=0, end=5) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-      match slices[0].to_inner() {
-        Ok(value) => inspect(value, content="hello")
-        Err(_) => fail("slice should succeed")
-      }
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = runs.range(start=0, end=5).collect()
+  inspect(slices.length(), content="1")
+  inspect(slices[0].to_inner(), content="hello")
 }
 
 ///|
 test "Runs::range partial range" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.range(start=1, end=4) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-      match slices[0].to_inner() {
-        Ok(value) => inspect(value, content="ell")
-        Err(_) => fail("slice should succeed")
-      }
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = runs.range(start=1, end=4).collect()
+  inspect(slices.length(), content="1")
+  inspect(slices[0].to_inner(), content="ell")
 }
 
 ///|
 test "Runs::range empty range" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.range(start=2, end=2) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="0")
-    }
-    Err(_) => fail("range with start==end should succeed")
-  }
+  let slices = runs.range(start=2, end=2).collect()
+  inspect(slices.length(), content="0")
 }
 
 ///|
 test "Runs::range out of bounds" {
   let runs = @rle.Runs::from_string("hello")
-  let result = runs.range(start=0, end=10)
+  let result = Ok(runs.range(start=0, end=10)) catch { error => Err(error) }
   inspect(result is Err(_), content="true")
 }
 
@@ -138,10 +118,7 @@ test "Runs::range_clamped clamps bounds" {
   let runs = @rle.Runs::from_string("hello")
   let slices = runs.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
-  match slices[0].to_inner() {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("slice should succeed")
-  }
+  inspect(slices[0].to_inner(), content="hello")
 }
 
 ///|
@@ -149,7 +126,8 @@ test "Runs::range_clamped keeps lazy slice boundary validation explicit" {
   let runs = @rle.Runs::from_string("A😀B")
   let slices = runs.range_clamped(start=2, end=4).collect()
   inspect(slices.length(), content="1")
-  match slices[0].to_inner() {
+  let result = Ok(slices[0].to_inner()) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("materializing a slice inside a surrogate pair should fail")
     Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
   }
@@ -158,43 +136,31 @@ test "Runs::range_clamped keeps lazy slice boundary validation explicit" {
 ///|
 test "Runs::split at mid" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.split(2) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="he")
-      inspect(right.to_string(), content="llo")
-    }
-    Err(_) => fail("split should succeed")
-  }
+  let (left, right) = runs.split(2)
+  inspect(left.to_string(), content="he")
+  inspect(right.to_string(), content="llo")
 }
 
 ///|
 test "Runs::split at start" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.split(0) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="")
-      inspect(right.to_string(), content="hello")
-    }
-    Err(_) => fail("split(0) should succeed")
-  }
+  let (left, right) = runs.split(0)
+  inspect(left.to_string(), content="")
+  inspect(right.to_string(), content="hello")
 }
 
 ///|
 test "Runs::split at end" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.split(5) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="hello")
-      inspect(right.to_string(), content="")
-    }
-    Err(_) => fail("split(total) should succeed")
-  }
+  let (left, right) = runs.split(5)
+  inspect(left.to_string(), content="hello")
+  inspect(right.to_string(), content="")
 }
 
 ///|
 test "Runs::split out of bounds" {
   let runs = @rle.Runs::from_string("hello")
-  let result = runs.split(10)
+  let result = Ok(runs.split(10)) catch { error => Err(error) }
   inspect(result is Err(_), content="true")
 }
 
@@ -270,29 +236,21 @@ test "Runs unicode handling" {
 ///|
 test "Runs unicode split" {
   let runs = @rle.Runs::from_string("日本語")
-  match runs.split(1) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="日")
-      inspect(right.to_string(), content="本語")
-    }
-    Err(_) => fail("split should work with unicode")
-  }
+  let (left, right) = runs.split(1)
+  inspect(left.to_string(), content="日")
+  inspect(right.to_string(), content="本語")
 }
 
 ///|
 test "Runs slice with surrogate pairs uses code unit indices" {
   let runs = @rle.Runs::from_string("A🤣B")
-  match runs.split(3) {
-    Ok((left, right)) => {
-      inspect(left.to_string().length(), content="3")
-      inspect(left.to_string().unsafe_get(0), content="65")
-      inspect(left.to_string().unsafe_get(1), content="55358")
-      inspect(left.to_string().unsafe_get(2), content="56611")
-      inspect(right.to_string().length(), content="1")
-      inspect(right.to_string().unsafe_get(0), content="66")
-    }
-    Err(_) => fail("split should use code unit indices")
-  }
+  let (left, right) = runs.split(3)
+  inspect(left.to_string().length(), content="3")
+  inspect(left.to_string().unsafe_get(0), content="65")
+  inspect(left.to_string().unsafe_get(1), content="55358")
+  inspect(left.to_string().unsafe_get(2), content="56611")
+  inspect(right.to_string().length(), content="1")
+  inspect(right.to_string().unsafe_get(0), content="66")
 }
 
 ///|
@@ -318,9 +276,10 @@ test "Runs::find_fast matches find" {
 test "Runs split surrogate pair" {
   let s = "😀" // len 2
   let runs = @rle.Runs::from_string(s)
-  match runs.split(1) {
-    Ok(_) => fail("split should fail on invalid boundary")
-    Err(err) => inspect(err, content="InvalidSlice(reason=InvalidIndex)")
+  try runs.split(1) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("split should fail on invalid boundary")
   }
 }
 
@@ -329,41 +288,41 @@ test "Runs split surrogate pair" {
 ///|
 test "Runs::value_at middle position" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.value_at(2) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at should succeed")
-  }
+  inspect(runs.value_at(2), content="hello")
 }
 
 ///|
 test "Runs::value_at start position" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.value_at(0) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at(0) should succeed")
-  }
+  inspect(runs.value_at(0), content="hello")
 }
 
 ///|
 test "Runs::value_at last position" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.value_at(4) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at(4) should succeed")
-  }
+  inspect(runs.value_at(4), content="hello")
 }
 
 ///|
 test "Runs::value_at out of bounds" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.value_at(5) is Err(_), content="true")
-  inspect(runs.value_at(-1) is Err(_), content="true")
+  inspect(
+    (Ok(runs.value_at(5)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.value_at(-1)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Runs::value_at empty runs" {
   let runs : @rle.Runs[String] = @rle.Runs::new()
-  inspect(runs.value_at(0) is Err(_), content="true")
+  inspect(
+    (Ok(runs.value_at(0)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 // ============== insert tests ==============
@@ -372,51 +331,44 @@ test "Runs::value_at empty runs" {
 test "Runs::insert at middle" {
   let runs = @rle.Runs::from_string("helo")
   let elem = @rle.Runs::from_string("ll")
-  match runs.insert(2, elem) {
-    Ok(result) => {
-      inspect(result.to_string(), content="helllo")
-      inspect(result.span(), content="6")
-    }
-    Err(_) => fail("insert should succeed")
-  }
+  let result = runs.insert(2, elem)
+  inspect(result.to_string(), content="helllo")
+  inspect(result.span(), content="6")
 }
 
 ///|
 test "Runs::insert at start (prepend)" {
   let runs = @rle.Runs::from_string("world")
   let elem = @rle.Runs::from_string("hello ")
-  match runs.insert(0, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(0) should succeed")
-  }
+  inspect(runs.insert(0, elem).to_string(), content="hello world")
 }
 
 ///|
 test "Runs::insert at end (append)" {
   let runs = @rle.Runs::from_string("hello")
   let elem = @rle.Runs::from_string(" world")
-  match runs.insert(5, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(5) should succeed")
-  }
+  inspect(runs.insert(5, elem).to_string(), content="hello world")
 }
 
 ///|
 test "Runs::insert out of bounds" {
   let runs = @rle.Runs::from_string("hello")
   let elem = @rle.Runs::from_string("x")
-  inspect(runs.insert(10, elem) is Err(_), content="true")
-  inspect(runs.insert(-1, elem) is Err(_), content="true")
+  inspect(
+    (Ok(runs.insert(10, elem)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.insert(-1, elem)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Runs::insert empty element" {
   let runs = @rle.Runs::from_string("hello")
   let elem : @rle.Runs[String] = @rle.Runs::new()
-  match runs.insert(2, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("inserting empty should succeed")
-  }
+  inspect(runs.insert(2, elem).to_string(), content="hello")
 }
 
 // ============== delete tests ==============
@@ -424,76 +376,73 @@ test "Runs::insert empty element" {
 ///|
 test "Runs::delete middle" {
   let runs = @rle.Runs::from_string("hello world")
-  match runs.delete(start=5, end=6) {
-    Ok(result) => inspect(result.to_string(), content="helloworld")
-    Err(_) => fail("delete should succeed")
-  }
+  inspect(runs.delete(start=5, end=6).to_string(), content="helloworld")
 }
 
 ///|
 test "Runs::delete from start" {
   let runs = @rle.Runs::from_string("hello world")
-  match runs.delete(start=0, end=6) {
-    Ok(result) => inspect(result.to_string(), content="world")
-    Err(_) => fail("delete from start should succeed")
-  }
+  inspect(runs.delete(start=0, end=6).to_string(), content="world")
 }
 
 ///|
 test "Runs::delete to end" {
   let runs = @rle.Runs::from_string("hello world")
-  match runs.delete(start=5, end=11) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("delete to end should succeed")
-  }
+  inspect(runs.delete(start=5, end=11).to_string(), content="hello")
 }
 
 ///|
 test "Runs::delete empty range" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.delete(start=2, end=2) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("delete empty range should succeed")
-  }
+  inspect(runs.delete(start=2, end=2).to_string(), content="hello")
 }
 
 ///|
 test "Runs::delete all" {
   let runs = @rle.Runs::from_string("hello")
-  match runs.delete(start=0, end=5) {
-    Ok(result) => {
-      inspect(result.is_empty(), content="true")
-      inspect(result.span(), content="0")
-    }
-    Err(_) => fail("delete all should succeed")
-  }
+  let result = runs.delete(start=0, end=5)
+  inspect(result.is_empty(), content="true")
+  inspect(result.span(), content="0")
 }
 
 ///|
 test "Runs::delete invalid range" {
   let runs = @rle.Runs::from_string("hello")
-  inspect(runs.delete(start=-1, end=3) is Err(_), content="true")
-  inspect(runs.delete(start=0, end=-1) is Err(_), content="true")
-  inspect(runs.delete(start=4, end=2) is Err(_), content="true")
-  inspect(runs.delete(start=0, end=10) is Err(_), content="true")
+  inspect(
+    (Ok(runs.delete(start=-1, end=3)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.delete(start=0, end=-1)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.delete(start=4, end=2)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.delete(start=0, end=10)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Runs::delete at surrogate pair boundary returns error" {
-  let runs = @rle.Runs::from_string("A😀B") // "A" (1) + "😀" (2) + "B" (1) = len 4
-  // Position 2 is inside the surrogate pair
-  match runs.delete(start=2, end=3) {
-    Ok(_) => fail("delete at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  let runs = @rle.Runs::from_string("A😀B")
+  try runs.delete(start=2, end=3) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("delete at surrogate boundary should fail")
   }
 }
 
 ///|
 test "Runs::delete empty range at surrogate pair boundary returns error" {
-  let runs = @rle.Runs::from_string("😀") // len 2, position 1 is inside the pair
-  match runs.delete(start=1, end=1) {
-    Ok(_) => fail("empty delete at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  let runs = @rle.Runs::from_string("😀")
+  try runs.delete(start=1, end=1) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("empty delete at surrogate boundary should fail")
   }
 }
 
@@ -503,57 +452,71 @@ test "Runs::delete empty range at surrogate pair boundary returns error" {
 test "Runs::splice replace middle" {
   let runs = @rle.Runs::from_string("hello world")
   let replacement = @rle.Runs::from_string("beautiful ")
-  match runs.splice(start=6, end=11, replacement) {
-    Ok(result) => inspect(result.to_string(), content="hello beautiful ")
-    Err(_) => fail("splice should succeed")
-  }
+  inspect(
+    runs.splice(start=6, end=11, replacement).to_string(),
+    content="hello beautiful ",
+  )
 }
 
 ///|
 test "Runs::splice insert (empty range)" {
   let runs = @rle.Runs::from_string("helloworld")
   let replacement = @rle.Runs::from_string(" ")
-  match runs.splice(start=5, end=5, replacement) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("splice with empty range should succeed")
-  }
+  inspect(
+    runs.splice(start=5, end=5, replacement).to_string(),
+    content="hello world",
+  )
 }
 
 ///|
 test "Runs::splice delete (empty replacement)" {
   let runs = @rle.Runs::from_string("hello world")
   let replacement : @rle.Runs[String] = @rle.Runs::new()
-  match runs.splice(start=5, end=6, replacement) {
-    Ok(result) => inspect(result.to_string(), content="helloworld")
-    Err(_) => fail("splice with empty replacement should succeed")
-  }
+  inspect(
+    runs.splice(start=5, end=6, replacement).to_string(),
+    content="helloworld",
+  )
 }
 
 ///|
 test "Runs::splice replace all" {
   let runs = @rle.Runs::from_string("hello")
   let replacement = @rle.Runs::from_string("world")
-  match runs.splice(start=0, end=5, replacement) {
-    Ok(result) => inspect(result.to_string(), content="world")
-    Err(_) => fail("splice all should succeed")
-  }
+  inspect(runs.splice(start=0, end=5, replacement).to_string(), content="world")
 }
 
 ///|
 test "Runs::splice invalid range" {
   let runs = @rle.Runs::from_string("hello")
   let replacement = @rle.Runs::from_string("x")
-  inspect(runs.splice(start=-1, end=3, replacement) is Err(_), content="true")
-  inspect(runs.splice(start=4, end=2, replacement) is Err(_), content="true")
-  inspect(runs.splice(start=0, end=10, replacement) is Err(_), content="true")
+  inspect(
+    (Ok(runs.splice(start=-1, end=3, replacement)) catch {
+      error => Err(error)
+    })
+    is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.splice(start=4, end=2, replacement)) catch { error => Err(error) })
+    is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(runs.splice(start=0, end=10, replacement)) catch {
+      error => Err(error)
+    })
+    is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Runs::splice at surrogate pair boundary returns error" {
-  let runs = @rle.Runs::from_string("A😀B") // len 4
+  let runs = @rle.Runs::from_string("A😀B")
   let replacement = @rle.Runs::from_string("x")
-  match runs.splice(start=2, end=3, replacement) {
-    Ok(_) => fail("splice at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  try runs.splice(start=2, end=3, replacement) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("splice at surrogate boundary should fail")
   }
 }

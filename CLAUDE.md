@@ -39,7 +39,7 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 **Test file conventions.** `*_test.mbt` (blackbox), `*_wbtest.mbt` (whitebox), `*_properties_test.mbt` (QuickCheck), `*_benchmark.mbt`. Don't mix blackbox and whitebox.
 
-**Error handling: Result-based, no panics.** Public APIs return `Result[T, RleError]`. Use `PositionOutOfBounds`, `InvalidRange`, `InvalidSlice` for user errors; `Internal` for invariant violations. Never `abort`/`panic` on user input.
+**Error handling: typed raise, no panics.** Fallible public APIs and `Sliceable::slice` use `raise RleError`; `slice_string_view` uses `raise SliceError`. Use `PositionOutOfBounds`, `InvalidRange`, `InvalidSlice` for user errors; `Internal` for invariant violations. Preserve `Option` for normal absence. Never `abort`/`panic` on user input.
 
 ## Known Mistakes
 
@@ -47,9 +47,9 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 **Forgetting bump_version.** Every `invalidate()` call must pair with `bump_version()`. Copy the pattern from `append()`.
 
-**String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. `slice_string_view` validates bounds and surrogate pair boundaries, returning `SliceError::InvalidIndex` for mid-pair cuts. Test with "😀" (2 units) and "A😀B" (4 units).
+**String indices ≠ character offsets.** MoonBit strings are UTF-16 code units. `slice_string_view` validates bounds and surrogate pair boundaries, raising `SliceError::InvalidIndex` for mid-pair cuts. Test with "😀" (2 units) and "A😀B" (4 units).
 
-**Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` returns error; batch/concat/extend_from silently skip.
+**Skipping zero-span rejection.** Every entry point adding elements must reject `span <= 0`. `append()` raises an error before mutation; batch/concat/extend_from silently skip.
 
 **Accessing prefix sums without ensure_prefix().** Always call `self.ensure_prefix()` before reading `self.prefix`. See `find()`, `span()`, `logical_length()`, `range()`.
 
@@ -59,7 +59,7 @@ Traits → Errors → Runs → PrefixSums → Rle → RleCursor → Slice. No up
 
 **Performance.** `Rle::find()` must use O(log n) binary search. Prefix sums are lazy — never rebuild inside mutations. `from_array_batch()` must stay O(n) single-pass. Benchmarks require `--release`.
 
-**Safety.** No panics on user input — always `Result`. Bounds-check new direct array access patterns. Stale cursors return `None`, never wrong data.
+**Safety.** No panics on user input — use typed `raise` for failures. Bounds-check new direct array access patterns. Stale cursors return `None`, never wrong data.
 
 **Cost.** Single package, minimal deps (`moonbitlang/quickcheck`, core bench). Keep property test generators bounded and test suite fast.
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-18
+
+### Breaking
+- Fallible APIs now raise `RleError` instead of returning `Result`, including `Runs`/`Rle` append, range, split, value_at, insert, delete, and splice; `Slice::to_inner`; and `Sliceable::slice`.
+- `slice_string_view` now returns `String` and raises `SliceError`.
+- Remove `.unwrap()` and success-result matching from callers. Propagate errors from raising functions or handle them with `try`/`catch`; update custom `Sliceable` implementations to return `Self raise RleError`. Optional lookups remain unchanged.
+
+### Changed
+- Support the current MoonBit toolchain, verified with moonc v0.10.21 and moon 0.1.20261117, retaining QuickCheck 0.15.0.
+- Migrate trait derivations to `#derive(...)` using the current formatter.
+- Update examples, doctests, and architecture guidance for typed error propagation.
+
 ## [0.3.0] - 2026-10-26
 
 ### Breaking

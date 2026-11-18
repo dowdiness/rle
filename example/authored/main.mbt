@@ -2,10 +2,11 @@
 // Adjacent runs from the same author merge automatically.
 
 ///|
+#derive(Debug, Eq)
 struct AuthoredRun {
   author : String
   text : String
-} derive(Debug, Eq)
+}
 
 ///|
 impl @rle.Mergeable for AuthoredRun with fn can_merge(
@@ -40,11 +41,9 @@ impl @rle.Sliceable for AuthoredRun with fn slice(
   self : AuthoredRun,
   start~ : Int32,
   end~ : Int32,
-) -> Result[AuthoredRun, @rle.RleError] {
-  match @rle.Sliceable::slice(self.text, start~, end~) {
-    Ok(sliced) => Ok({ author: self.author, text: sliced, })
-    Err(e) => Err(e)
-  }
+) -> AuthoredRun raise @rle.RleError {
+  let sliced = @rle.Sliceable::slice(self.text, start~, end~)
+  { author: self.author, text: sliced, }
 }
 
 ///|
@@ -61,48 +60,40 @@ fn print_authored(run : AuthoredRun?) -> Unit {
 }
 
 ///|
-fn main {
+fn main raise {
   println("=== Same-Author Merge ===")
   let rle : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
-  rle.append(authored("alice", "Hello")) |> @debug.debug //=> Ok(())
-  rle.append(authored("alice", ", world")) |> @debug.debug //=> Ok(())
+  rle.append(authored("alice", "Hello"))
+  rle.append(authored("alice", ", world"))
   rle.length() |> println //=> 1  (merged)
   print_authored(rle.get(0)) //=> Some({author: "alice", text: "Hello, world"})
 
   println("\n=== Different-Author Separation ===")
   let rle2 : @rle.Rle[AuthoredRun] = @rle.Rle::Rle()
-  rle2.append(authored("alice", "Hello")) |> @debug.debug
-  rle2.append(authored("bob", " world")) |> @debug.debug
+  rle2.append(authored("alice", "Hello"))
+  rle2.append(authored("bob", " world"))
   rle2.length() |> println //=> 2  (kept separate)
   print_authored(rle2.get(0)) //=> Some({author: "alice", text: "Hello"})
   print_authored(rle2.get(1)) //=> Some({author: "bob",   text: " world"})
 
   println("\n=== Split at Author Boundary ===")
-  match rle2.split(5) {
-    Ok((left, right)) => {
-      left.length() |> println //=> 1
-      right.length() |> println //=> 1
-      print_authored(left.get(0)) //=> Some({author: "alice", text: "Hello"})
-      print_authored(right.get(0)) //=> Some({author: "bob",   text: " world"})
-    }
-    Err(e) => e |> @debug.debug
-  }
+  let (left, right) = rle2.split(5)
+  left.length() |> println //=> 1
+  right.length() |> println //=> 1
+  print_authored(left.get(0)) //=> Some({author: "alice", text: "Hello"})
+  print_authored(right.get(0)) //=> Some({author: "bob",   text: " world"})
 
   println("\n=== Range Across Runs ===")
   // "Hello" (alice, 0-4) + " world" (bob, 5-10)
   // range(3, 8) -> "lo" from alice, " wo" from bob
-  match rle2.range(start=3, end=8) {
-    Ok(iter) =>
-      iter.each(fn(slice) {
-        match slice.to_inner() {
-          Ok(r) => println("\{r.author}: \{r.text}")
-          Err(e) => e |> @debug.debug
-        }
-      })
-    //=> alice: lo
-    //=> bob:  wo
-    Err(e) => e |> @debug.debug
-  }
+  rle2
+  .range(start=3, end=8)
+  .each(slice => {
+    let r = slice.to_inner()
+    println("\{r.author}: \{r.text}")
+  })
+  //=> alice: lo
+  //=> bob:  wo
 
   println("\n=== From Array (same-author merges) ===")
   let runs = [

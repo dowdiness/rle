@@ -24,17 +24,22 @@ test "Rle::from_string with empty string" {
 ///|
 test "Rle::append merges adjacent runs" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  let _ = rle.append("hello")
-  let _ = rle.append(" world")
+  rle.append("hello")
+  rle.append(" world")
   inspect(rle.length(), content="1")
   inspect(rle.to_string(), content="hello world")
 }
 
 ///|
 test "Rle::append rejects empty element" {
-  let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  let result = rle.append("")
+  let rle = @rle.Rle::from_string("hello")
+  let cursor = rle.cursor()
+  let version = rle.get_version()
+  let result = Ok(rle.append("")) catch { error => Err(error) }
   @debug.debug_inspect(result, content="Err(Internal(EmptyElement))")
+  inspect(rle.to_string(), content="hello")
+  inspect(rle.get_version() == version, content="true")
+  inspect(cursor.is_stale(), content="false")
 }
 
 ///|
@@ -57,7 +62,7 @@ test "Rle::logical_length returns total logical length (cached)" {
 test "Rle::append invalidates cache" {
   let rle = @rle.Rle::from_string("hello")
   let _ = rle.span() // Build cache
-  let _ = rle.append(" world")
+  rle.append(" world")
   // Cache should be rebuilt
   inspect(rle.span(), content="11")
 }
@@ -98,51 +103,30 @@ test "Rle::find at boundaries" {
 ///|
 test "Rle::range full range" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=0, end=5) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-      match slices[0].to_inner() {
-        Ok(value) => inspect(value, content="hello")
-        Err(_) => fail("slice should succeed")
-      }
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = rle.range(start=0, end=5).collect()
+  inspect(slices.length(), content="1")
+  inspect(slices[0].to_inner(), content="hello")
 }
 
 ///|
 test "Rle::range partial range" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=1, end=4) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-      match slices[0].to_inner() {
-        Ok(value) => inspect(value, content="ell")
-        Err(_) => fail("slice should succeed")
-      }
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = rle.range(start=1, end=4).collect()
+  inspect(slices.length(), content="1")
+  inspect(slices[0].to_inner(), content="ell")
 }
 
 ///|
 test "Rle::range empty range" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=2, end=2) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="0")
-    }
-    Err(_) => fail("range with start==end should succeed")
-  }
+  let slices = rle.range(start=2, end=2).collect()
+  inspect(slices.length(), content="0")
 }
 
 ///|
 test "Rle::range out of bounds" {
   let rle = @rle.Rle::from_string("hello")
-  let result = rle.range(start=0, end=10)
+  let result = Ok(rle.range(start=0, end=10)) catch { error => Err(error) }
   inspect(result is Err(_), content="true")
 }
 
@@ -151,10 +135,7 @@ test "Rle::range_clamped clamps bounds" {
   let rle = @rle.Rle::from_string("hello")
   let slices = rle.range_clamped(start=-5, end=100).collect()
   inspect(slices.length(), content="1")
-  match slices[0].to_inner() {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("slice should succeed")
-  }
+  inspect(slices[0].to_inner(), content="hello")
 }
 
 ///|
@@ -162,40 +143,33 @@ test "Rle::range_clamped keeps lazy slice boundary validation explicit" {
   let rle = @rle.Rle::from_string("A😀B")
   let slices = rle.range_clamped(start=2, end=4).collect()
   inspect(slices.length(), content="1")
-  match slices[0].to_inner() {
-    Ok(_) => fail("materializing a slice inside a surrogate pair should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  try slices[0].to_inner() catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("materializing a slice inside a surrogate pair should fail")
   }
 }
 
 ///|
 test "Rle::split at mid" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.split(2) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="he")
-      inspect(right.to_string(), content="llo")
-    }
-    Err(_) => fail("split should succeed")
-  }
+  let (left, right) = rle.split(2)
+  inspect(left.to_string(), content="he")
+  inspect(right.to_string(), content="llo")
 }
 
 ///|
 test "Rle::split at boundaries" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.split(0) {
-    Ok((left, right)) => {
-      inspect(left.to_string(), content="")
-      inspect(right.to_string(), content="hello")
-    }
-    Err(_) => fail("split(0) should succeed")
-  }
+  let (left, right) = rle.split(0)
+  inspect(left.to_string(), content="")
+  inspect(right.to_string(), content="hello")
 }
 
 ///|
 test "Rle::split out of bounds" {
   let rle = @rle.Rle::from_string("hello")
-  let result = rle.split(10)
+  let result = Ok(rle.split(10)) catch { error => Err(error) }
   inspect(result is Err(_), content="true")
 }
 
@@ -271,22 +245,13 @@ test "Rle unicode handling" {
 ///|
 test "Rle range honors code unit indices" {
   let rle = @rle.Rle::from_string("A🤣B")
-  match rle.range(start=0, end=3) {
-    Ok(iter) => {
-      let slices = iter.collect()
-      inspect(slices.length(), content="1")
-      match slices[0].to_inner() {
-        Ok(value) => {
-          inspect(value.length(), content="3")
-          inspect(value.unsafe_get(0), content="65")
-          inspect(value.unsafe_get(1), content="55358")
-          inspect(value.unsafe_get(2), content="56611")
-        }
-        Err(_) => fail("slice should succeed")
-      }
-    }
-    Err(_) => fail("range should succeed")
-  }
+  let slices = rle.range(start=0, end=3).collect()
+  inspect(slices.length(), content="1")
+  let value = slices[0].to_inner()
+  inspect(value.length(), content="3")
+  inspect(value.unsafe_get(0), content="65")
+  inspect(value.unsafe_get(1), content="55358")
+  inspect(value.unsafe_get(2), content="56611")
 }
 
 ///|
@@ -300,7 +265,8 @@ test "Rle to_runs and from_runs roundtrip" {
 ///|
 test "RleError::message for PositionOutOfBounds" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.split(10) {
+  let result = Ok(rle.split(10)) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("should fail")
     Err(e) =>
       inspect(
@@ -313,7 +279,8 @@ test "RleError::message for PositionOutOfBounds" {
 ///|
 test "RleError::message for InvalidRange NegativeStart" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=-1, end=3) {
+  let result = Ok(rle.range(start=-1, end=3)) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("should fail")
     Err(e) =>
       inspect(e.message(), content="Range start (-1) cannot be negative")
@@ -323,7 +290,8 @@ test "RleError::message for InvalidRange NegativeStart" {
 ///|
 test "RleError::message for InvalidRange StartAfterEnd" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=4, end=2) {
+  let result = Ok(rle.range(start=4, end=2)) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("should fail")
     Err(e) =>
       inspect(e.message(), content="Range start (4) must come before end (2)")
@@ -333,7 +301,8 @@ test "RleError::message for InvalidRange StartAfterEnd" {
 ///|
 test "RleError::message for InvalidRange ExceedsLength" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.range(start=0, end=10) {
+  let result = Ok(rle.range(start=0, end=10)) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("should fail")
     Err(e) =>
       inspect(e.message(), content="Range end (10) exceeds document length (5)")
@@ -343,7 +312,8 @@ test "RleError::message for InvalidRange ExceedsLength" {
 ///|
 test "RleError::message for Internal EmptyElement" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  match rle.append("") {
+  let result = Ok(rle.append("")) catch { error => Err(error) }
+  match result {
     Ok(_) => fail("should fail")
     Err(e) =>
       inspect(
@@ -366,7 +336,7 @@ test "RleCursor::is_stale returns false for fresh cursor" {
 test "RleCursor::is_stale returns true after append" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.is_stale(), content="true")
 }
 
@@ -391,7 +361,7 @@ test "RleCursor::is_stale returns true after extend_from" {
 test "stale cursor current returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.current() is None, content="true")
   inspect(cursor.current_item() is None, content="true")
 }
@@ -400,7 +370,7 @@ test "stale cursor current returns None" {
 test "stale cursor advance returns false" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.advance(1), content="false")
 }
 
@@ -409,7 +379,7 @@ test "stale cursor retreat returns false" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let _ = cursor.advance(2) // Move forward first
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.retreat(1), content="false")
 }
 
@@ -417,7 +387,7 @@ test "stale cursor retreat returns false" {
 test "stale cursor seek returns false" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.seek(2), content="false")
 }
 
@@ -425,7 +395,7 @@ test "stale cursor seek returns false" {
 test "stale cursor at_end returns true" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.at_end(), content="true")
 }
 
@@ -433,7 +403,7 @@ test "stale cursor at_end returns true" {
 test "stale cursor next returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.next() is None, content="true")
 }
 
@@ -442,7 +412,7 @@ test "stale cursor prev returns None" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
   let _ = cursor.advance(2)
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.prev() is None, content="true")
 }
 
@@ -450,7 +420,7 @@ test "stale cursor prev returns None" {
 test "stale cursor iter_forward returns empty" {
   let rle = @rle.Rle::from_string("hello")
   let cursor = rle.cursor()
-  let _ = rle.append(" world")
+  rle.append(" world")
   let items = cursor.iter_forward().collect()
   inspect(items.length(), content="0")
 }
@@ -464,7 +434,7 @@ test "stale cursor position returns None" {
     Some(position) => inspect(position, content="3")
     None => fail("cursor position should be available")
   }
-  let _ = rle.append(" world")
+  rle.append(" world")
   inspect(cursor.position() is None, content="true")
 }
 
@@ -477,9 +447,9 @@ test "Rle::get_version starts at 0" {
 ///|
 test "Rle::get_version increments on mutation" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  let _ = rle.append("a")
+  rle.append("a")
   inspect(rle.get_version(), content="1")
-  let _ = rle.append("b")
+  rle.append("b")
   inspect(rle.get_version(), content="2")
   rle.clear()
   inspect(rle.get_version(), content="3")
@@ -492,41 +462,41 @@ test "Rle::get_version increments on mutation" {
 ///|
 test "Rle::value_at middle position" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.value_at(2) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at should succeed")
-  }
+  inspect(rle.value_at(2), content="hello")
 }
 
 ///|
 test "Rle::value_at start position" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.value_at(0) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at(0) should succeed")
-  }
+  inspect(rle.value_at(0), content="hello")
 }
 
 ///|
 test "Rle::value_at last position" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.value_at(4) {
-    Ok(value) => inspect(value, content="hello")
-    Err(_) => fail("value_at(4) should succeed")
-  }
+  inspect(rle.value_at(4), content="hello")
 }
 
 ///|
 test "Rle::value_at out of bounds" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.value_at(5) is Err(_), content="true")
-  inspect(rle.value_at(-1) is Err(_), content="true")
+  inspect(
+    (Ok(rle.value_at(5)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.value_at(-1)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Rle::value_at empty rle" {
   let rle : @rle.Rle[String] = @rle.Rle::Rle()
-  inspect(rle.value_at(0) is Err(_), content="true")
+  inspect(
+    (Ok(rle.value_at(0)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 // ============== insert tests ==============
@@ -535,51 +505,44 @@ test "Rle::value_at empty rle" {
 test "Rle::insert at middle" {
   let rle = @rle.Rle::from_string("helo")
   let elem = @rle.Rle::from_string("ll")
-  match rle.insert(2, elem) {
-    Ok(result) => {
-      inspect(result.to_string(), content="helllo")
-      inspect(result.span(), content="6")
-    }
-    Err(_) => fail("insert should succeed")
-  }
+  let result = rle.insert(2, elem)
+  inspect(result.to_string(), content="helllo")
+  inspect(result.span(), content="6")
 }
 
 ///|
 test "Rle::insert at start (prepend)" {
   let rle = @rle.Rle::from_string("world")
   let elem = @rle.Rle::from_string("hello ")
-  match rle.insert(0, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(0) should succeed")
-  }
+  inspect(rle.insert(0, elem).to_string(), content="hello world")
 }
 
 ///|
 test "Rle::insert at end (append)" {
   let rle = @rle.Rle::from_string("hello")
   let elem = @rle.Rle::from_string(" world")
-  match rle.insert(5, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("insert(len) should succeed")
-  }
+  inspect(rle.insert(5, elem).to_string(), content="hello world")
 }
 
 ///|
 test "Rle::insert out of bounds" {
   let rle = @rle.Rle::from_string("hello")
   let elem = @rle.Rle::from_string("x")
-  inspect(rle.insert(10, elem) is Err(_), content="true")
-  inspect(rle.insert(-1, elem) is Err(_), content="true")
+  inspect(
+    (Ok(rle.insert(10, elem)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.insert(-1, elem)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Rle::insert empty element" {
   let rle = @rle.Rle::from_string("hello")
   let elem : @rle.Rle[String] = @rle.Rle::Rle()
-  match rle.insert(2, elem) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("inserting empty should succeed")
-  }
+  inspect(rle.insert(2, elem).to_string(), content="hello")
 }
 
 // ============== delete tests ==============
@@ -587,75 +550,73 @@ test "Rle::insert empty element" {
 ///|
 test "Rle::delete middle" {
   let rle = @rle.Rle::from_string("hello world")
-  match rle.delete(start=5, end=6) {
-    Ok(result) => inspect(result.to_string(), content="helloworld")
-    Err(_) => fail("delete should succeed")
-  }
+  inspect(rle.delete(start=5, end=6).to_string(), content="helloworld")
 }
 
 ///|
 test "Rle::delete from start" {
   let rle = @rle.Rle::from_string("hello world")
-  match rle.delete(start=0, end=6) {
-    Ok(result) => inspect(result.to_string(), content="world")
-    Err(_) => fail("delete from start should succeed")
-  }
+  inspect(rle.delete(start=0, end=6).to_string(), content="world")
 }
 
 ///|
 test "Rle::delete to end" {
   let rle = @rle.Rle::from_string("hello world")
-  match rle.delete(start=5, end=11) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("delete to end should succeed")
-  }
+  inspect(rle.delete(start=5, end=11).to_string(), content="hello")
 }
 
 ///|
 test "Rle::delete empty range" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.delete(start=2, end=2) {
-    Ok(result) => inspect(result.to_string(), content="hello")
-    Err(_) => fail("delete empty range should succeed")
-  }
+  inspect(rle.delete(start=2, end=2).to_string(), content="hello")
 }
 
 ///|
 test "Rle::delete all" {
   let rle = @rle.Rle::from_string("hello")
-  match rle.delete(start=0, end=5) {
-    Ok(result) => {
-      inspect(result.is_empty(), content="true")
-      inspect(result.span(), content="0")
-    }
-    Err(_) => fail("delete all should succeed")
-  }
+  let result = rle.delete(start=0, end=5)
+  inspect(result.is_empty(), content="true")
+  inspect(result.span(), content="0")
 }
 
 ///|
 test "Rle::delete invalid range" {
   let rle = @rle.Rle::from_string("hello")
-  inspect(rle.delete(start=-1, end=3) is Err(_), content="true")
-  inspect(rle.delete(start=0, end=-1) is Err(_), content="true")
-  inspect(rle.delete(start=4, end=2) is Err(_), content="true")
-  inspect(rle.delete(start=0, end=10) is Err(_), content="true")
+  inspect(
+    (Ok(rle.delete(start=-1, end=3)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.delete(start=0, end=-1)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.delete(start=4, end=2)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.delete(start=0, end=10)) catch { error => Err(error) }) is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Rle::delete at surrogate pair boundary returns error" {
   let rle = @rle.Rle::from_string("A😀B") // len 4
-  match rle.delete(start=2, end=3) {
-    Ok(_) => fail("delete at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  try rle.delete(start=2, end=3) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("delete at surrogate boundary should fail")
   }
 }
 
 ///|
 test "Rle::delete empty range at surrogate pair boundary returns error" {
   let rle = @rle.Rle::from_string("😀") // len 2, position 1 is inside the pair
-  match rle.delete(start=1, end=1) {
-    Ok(_) => fail("empty delete at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  try rle.delete(start=1, end=1) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("empty delete at surrogate boundary should fail")
   }
 }
 
@@ -665,58 +626,68 @@ test "Rle::delete empty range at surrogate pair boundary returns error" {
 test "Rle::splice replace middle" {
   let rle = @rle.Rle::from_string("hello world")
   let replacement = @rle.Rle::from_string("beautiful ")
-  match rle.splice(start=6, end=11, replacement) {
-    Ok(result) => inspect(result.to_string(), content="hello beautiful ")
-    Err(_) => fail("splice should succeed")
-  }
+  inspect(
+    rle.splice(start=6, end=11, replacement).to_string(),
+    content="hello beautiful ",
+  )
 }
 
 ///|
 test "Rle::splice insert (empty range)" {
   let rle = @rle.Rle::from_string("helloworld")
   let replacement = @rle.Rle::from_string(" ")
-  match rle.splice(start=5, end=5, replacement) {
-    Ok(result) => inspect(result.to_string(), content="hello world")
-    Err(_) => fail("splice with empty range should succeed")
-  }
+  inspect(
+    rle.splice(start=5, end=5, replacement).to_string(),
+    content="hello world",
+  )
 }
 
 ///|
 test "Rle::splice delete (empty replacement)" {
   let rle = @rle.Rle::from_string("hello world")
   let replacement : @rle.Rle[String] = @rle.Rle::Rle()
-  match rle.splice(start=5, end=6, replacement) {
-    Ok(result) => inspect(result.to_string(), content="helloworld")
-    Err(_) => fail("splice with empty replacement should succeed")
-  }
+  inspect(
+    rle.splice(start=5, end=6, replacement).to_string(),
+    content="helloworld",
+  )
 }
 
 ///|
 test "Rle::splice replace all" {
   let rle = @rle.Rle::from_string("hello")
   let replacement = @rle.Rle::from_string("world")
-  match rle.splice(start=0, end=5, replacement) {
-    Ok(result) => inspect(result.to_string(), content="world")
-    Err(_) => fail("splice all should succeed")
-  }
+  inspect(rle.splice(start=0, end=5, replacement).to_string(), content="world")
 }
 
 ///|
 test "Rle::splice invalid range" {
   let rle = @rle.Rle::from_string("hello")
   let replacement = @rle.Rle::from_string("x")
-  inspect(rle.splice(start=-1, end=3, replacement) is Err(_), content="true")
-  inspect(rle.splice(start=4, end=2, replacement) is Err(_), content="true")
-  inspect(rle.splice(start=0, end=10, replacement) is Err(_), content="true")
+  inspect(
+    (Ok(rle.splice(start=-1, end=3, replacement)) catch { error => Err(error) })
+    is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.splice(start=4, end=2, replacement)) catch { error => Err(error) })
+    is Err(_),
+    content="true",
+  )
+  inspect(
+    (Ok(rle.splice(start=0, end=10, replacement)) catch { error => Err(error) })
+    is Err(_),
+    content="true",
+  )
 }
 
 ///|
 test "Rle::splice at surrogate pair boundary returns error" {
   let rle = @rle.Rle::from_string("A😀B") // len 4
   let replacement = @rle.Rle::from_string("x")
-  match rle.splice(start=2, end=3, replacement) {
-    Ok(_) => fail("splice at surrogate boundary should fail")
-    Err(e) => inspect(e, content="InvalidSlice(reason=InvalidIndex)")
+  try rle.splice(start=2, end=3, replacement) catch {
+    error => inspect(error, content="InvalidSlice(reason=InvalidIndex)")
+  } noraise {
+    _ => fail("splice at surrogate boundary should fail")
   }
 }
 

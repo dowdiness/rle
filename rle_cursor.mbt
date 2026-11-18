@@ -31,13 +31,14 @@ pub type MayStale[T] = T?
 /// ```
 ///
 /// Create a new cursor after mutations to continue traversal.
+#derive(Debug, Eq)
 pub struct RleCursor[T] {
   rle : Rle[T]
   version : Int32 // Captured version at cursor creation
   mut run_index : Int32
   mut offset_in_run : Int32
   mut global_offset : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl[T : Debug] Show for RleCursor[T] with fn output(self, logger) {

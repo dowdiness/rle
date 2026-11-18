@@ -25,7 +25,7 @@ pub impl @quickcheck.Arbitrary for Runs[String] with fn arbitrary(
     }
     let s = sb.to_string()
     if !s.is_empty() {
-      let _ = runs.append(s)
+      try! runs.append(s)
     }
   }
   runs
@@ -54,7 +54,7 @@ pub impl @shrink.Shrink for Runs[String] with fn shrink(runs) {
       let smaller : Runs[String] = Runs::new()
       for j = 0; j < len; j = j + 1 {
         if i != j {
-          let _ = smaller.append(items[j])
+          try! smaller.append(items[j])
         }
       }
       results.push(smaller)
@@ -65,7 +65,7 @@ pub impl @shrink.Shrink for Runs[String] with fn shrink(runs) {
     let half = len / 2
     let first_half : Runs[String] = Runs::new()
     for i = 0; i < half; i = i + 1 {
-      let _ = first_half.append(items[i])
+      try! first_half.append(items[i])
     }
     results.push(first_half)
   }
@@ -80,15 +80,16 @@ pub impl @shrink.Shrink for Runs[String] with fn shrink(runs) {
         if i == j {
           let half = item_len / 2
           if half > 0 {
-            match Sliceable::slice(item, start=0, end=half) {
-              Ok(slice) => {
-                let _ = shortened.append(slice)
-              }
-              Err(_) => ()
-            }
+            // Invalid UTF-16 cuts are not shrink candidates.
+            try! (try Sliceable::slice(item, start=0, end=half) catch {
+              RleError::InvalidSlice(reason=_) => ()
+              error => raise error
+            } noraise {
+              slice => shortened.append(slice)
+            })
           }
         } else {
-          let _ = shortened.append(items[j])
+          try! shortened.append(items[j])
         }
       }
       if !shortened.is_empty() {
@@ -232,11 +233,14 @@ pub impl @shrink.Shrink for Slice[String] with fn shrink(slice) {
   }
   // Shrink value (keep range valid)
   if value_len > slice.end {
-    match Sliceable::slice(slice.value, start=0, end=slice.end) {
-      Ok(new_value) =>
+    // A public Slice may contain an invalid UTF-16 boundary.
+    try! (try Sliceable::slice(slice.value, start=0, end=slice.end) catch {
+      RleError::InvalidSlice(reason=_) => ()
+      error => raise error
+    } noraise {
+      new_value =>
         results.push({ value: new_value, start: slice.start, end: slice.end, })
-      Err(_) => ()
-    }
+    })
   }
   results.iter()
 }
