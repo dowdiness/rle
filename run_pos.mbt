@@ -1,9 +1,10 @@
 ///|
 /// Position within runs - result of find operations
+#derive(Debug, Eq)
 pub(all) struct RunPos {
   run : Int32 // which run (0-indexed)
   offset : Int32 // offset within that run
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl Show for RunPos with fn output(self, logger) {

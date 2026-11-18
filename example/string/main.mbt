@@ -23,7 +23,7 @@ fn print_string(value : String?) -> Unit {
 }
 
 ///|
-fn main {
+fn main raise {
   println("=== Construction & Span ===")
   let rle = @rle.Rle::from_string("hello world")
   rle.span() |> println //=> 11
@@ -37,20 +37,16 @@ fn main {
 
   println("\n=== Append (auto-merge) ===")
   let rle2 : @rle.Rle[String] = @rle.Rle::Rle()
-  rle2.append("hello") |> @debug.debug //=> Ok(())
-  rle2.append(", ") |> @debug.debug //=> Ok(())
-  rle2.append("world") |> @debug.debug //=> Ok(())
+  rle2.append("hello")
+  rle2.append(", ")
+  rle2.append("world")
   rle2.length() |> println //=> 1  (all merged)
   rle2.to_string() |> println //=> hello, world
 
   println("\n=== Split ===")
-  match rle.split(5) {
-    Ok((left, right)) => {
-      left.to_string() |> println //=> hello
-      right.to_string() |> println //=>  world  (note: leading space)
-    }
-    Err(e) => e |> @debug.debug
-  }
+  let (left, right) = rle.split(5)
+  left.to_string() |> println //=> hello
+  right.to_string() |> println //=>  world  (note: leading space)
 
   println("\n=== Concat ===")
   let a = @rle.Rle::from_string("foo")
@@ -61,17 +57,10 @@ fn main {
 
   println("\n=== Range ===")
   let rle3 = @rle.Rle::from_string("hello world")
-  match rle3.range(start=6, end=11) {
-    Ok(iter) =>
-      iter.each(fn(slice) {
-        match slice.to_inner() {
-          Ok(s) => s |> println //=> world
-          Err(e) => e |> println
-        }
-      })
-    Err(e) => e |> println
-  }
-
+  rle3
+  .range(start=6, end=11)
+  .each(slice => slice.to_inner() |> println, //=> world
+  )
   println(
     "\n=== From Array (zero-span entries skipped; non-empty strings merge) ===",
   )
@@ -91,14 +80,17 @@ fn main {
   println("\n=== Cursor Staleness ===")
   let rle6 = @rle.Rle::from_string("hello")
   let cursor2 = rle6.cursor()
-  rle6.append(" world") |> @debug.debug //=> Ok(())
+  rle6.append(" world") //=> succeeds
   cursor2.is_stale() |> println //=> true
   print_string(cursor2.next()) //=> None  (stale)
 
   println("\n=== Error Messages ===")
-  match rle.split(99) {
-    Ok(_) => println("unexpected Ok")
-    Err(e) => e.message() |> println
+  ignore(rle.split(99)) catch {
+    @rle.RleError::PositionOutOfBounds(position~, length~) =>
+      println(
+        "Position \{position} is outside the document (length: \{length})",
+      )
     //=> Position 99 is outside the document (length: 11)
+    error => raise error
   }
 }

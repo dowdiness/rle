@@ -8,11 +8,12 @@
 /// This enables zero-copy iteration: if you only need to count matching runs,
 /// check a condition, or read metadata, you can inspect `Slice` fields without
 /// ever allocating new strings or sub-runs.
+#derive(Debug, Eq)
 pub struct Slice[T] {
   value : T
   start : Int32
   end : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl[T : Debug] Show for Slice[T] with fn output(self, logger) {
@@ -23,9 +24,9 @@ pub impl[T : Debug] Show for Slice[T] with fn output(self, logger) {
 /// Materializes the sliced value by calling `Sliceable::slice(value, start, end)`.
 ///
 /// This is the point where allocation happens (e.g., creating a substring).
-/// Returns `Err` if the slice bounds are invalid (e.g., inside a UTF-16
+/// Raises `RleError` if the slice bounds are invalid (e.g., inside a UTF-16
 /// surrogate pair for strings).
-pub fn[T : Sliceable] Slice::to_inner(self : Slice[T]) -> Result[T, RleError] {
+pub fn[T : Sliceable] Slice::to_inner(self : Slice[T]) -> T raise RleError {
   Sliceable::slice(self.value, start=self.start, end=self.end)
 }
 

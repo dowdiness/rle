@@ -1,6 +1,7 @@
 ///|
 /// Array of mergeable runs - core RLE data structure
-pub struct Runs[T](Array[T]) derive(Debug, Eq)
+#derive(Debug, Eq)
+pub struct Runs[T](Array[T])
 
 ///|
 pub impl[T : Debug] Show for Runs[T] with fn output(self, logger) {
@@ -195,12 +196,15 @@ pub impl[T : Spanning] Spanning for Runs[T] with fn logical_length(
 /// with occasional O(k) normalization where k = number of cascading merges.
 ///
 /// **Invariant**: After append, no two adjacent runs are mergeable.
+///
+/// Raises `RleError::Internal(EmptyElement)` for non-positive spans before
+/// changing the runs.
 pub fn[T : Mergeable + Spanning] Runs::append(
   self : Runs[T],
   elem : T,
-) -> Result[Unit, RleError] {
+) -> Unit raise RleError {
   if Spanning::span(elem) <= 0 {
-    return Err(RleError::Internal(InternalError::EmptyElement))
+    raise RleError::Internal(InternalError::EmptyElement)
   }
   match self.0.last() {
     Some(last) =>
@@ -212,7 +216,6 @@ pub fn[T : Mergeable + Spanning] Runs::append(
       }
     None => self.0.push(elem)
   }
-  Ok(())
 }
 
 ///|
@@ -328,13 +331,10 @@ pub fn[T : Spanning] Runs::range(
   self : Runs[T],
   start~ : Int32,
   end~ : Int32,
-) -> Result[Iter[Slice[T]], RleError] {
+) -> Iter[Slice[T]] raise RleError {
   let total = self.span()
-  match range_check(start, end, total) {
-    Ok(_) => ()
-    Err(e) => return Err(e)
-  }
-  Ok(self.range_unchecked(start~, end~))
+  range_check(start, end, total)
+  self.range_unchecked(start~, end~)
 }
 
 ///|
@@ -395,16 +395,16 @@ pub fn[T : Spanning] Runs::range_clamped(
 pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
   self : Runs[T],
   pos : Int32,
-) -> Result[(Runs[T], Runs[T]), RleError] {
+) -> (Runs[T], Runs[T]) raise RleError {
   let total = self.span()
   if pos < 0 || pos > total {
-    return Err(RleError::PositionOutOfBounds(position=pos, length=total))
+    raise RleError::PositionOutOfBounds(position=pos, length=total)
   }
   if pos == 0 {
-    return Ok((Runs::new(), self))
+    return (Runs([]), self)
   }
   if pos == total {
-    return Ok((self, Runs::new()))
+    return (self, Runs([]))
   }
   let left : Runs[T] = Runs::new()
   let right : Runs[T] = Runs::new()
@@ -413,41 +413,21 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::split(
     let run_len = Spanning::span(item)
     let item_end = cur + run_len
     if item_end <= pos {
-      match left.append(item) {
-        Err(e) => return Err(e)
-        Ok(_) => ()
-      }
+      left.append(item)
     } else if cur >= pos {
-      match right.append(item) {
-        Err(e) => return Err(e)
-        Ok(_) => ()
-      }
+      right.append(item)
     } else {
       let offset = pos - cur
       if offset > 0 {
-        match Sliceable::slice(item, start=0, end=offset) {
-          Ok(slice) =>
-            match left.append(slice) {
-              Err(e) => return Err(e)
-              Ok(_) => ()
-            }
-          Err(e) => return Err(e)
-        }
+        left.append(Sliceable::slice(item, start=0, end=offset))
       }
       if offset < run_len {
-        match Sliceable::slice(item, start=offset, end=run_len) {
-          Ok(slice) =>
-            match right.append(slice) {
-              Err(e) => return Err(e)
-              Ok(_) => ()
-            }
-          Err(e) => return Err(e)
-        }
+        right.append(Sliceable::slice(item, start=offset, end=run_len))
       }
     }
     cur = item_end
   }
-  Ok((left, right))
+  (left, right)
 }
 
 ///|
@@ -504,30 +484,26 @@ pub fn[T : Mergeable + Spanning] Runs::extend_from(
 pub fn[T : Spanning] Runs::value_at(
   self : Runs[T],
   pos : Int32,
-) -> Result[T, RleError] {
+) -> T raise RleError {
   let total = self.span()
   if pos < 0 || pos >= total {
-    return Err(RleError::PositionOutOfBounds(position=pos, length=total))
+    raise RleError::PositionOutOfBounds(position=pos, length=total)
   }
   match self.find(pos) {
     Some(rp) =>
       match self.get(rp.run) {
-        Some(value) => Ok(value)
+        Some(value) => value
         None =>
-          Err(
-            RleError::Internal(
-              InternalError::InvalidState(
-                detail="find returned invalid run index",
-              ),
+          raise RleError::Internal(
+            InternalError::InvalidState(
+              detail="find returned invalid run index",
             ),
           )
       }
     None =>
-      Err(
-        RleError::Internal(
-          InternalError::InvalidState(
-            detail="find returned None for valid position",
-          ),
+      raise RleError::Internal(
+        InternalError::InvalidState(
+          detail="find returned None for valid position",
         ),
       )
   }
@@ -539,11 +515,9 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::insert(
   self : Runs[T],
   pos : Int32,
   elem : Runs[T],
-) -> Result[Runs[T], RleError] {
-  match self.split(pos) {
-    Ok((left, right)) => Ok(left.concat(elem).concat(right))
-    Err(e) => Err(e)
-  }
+) -> Runs[T] raise RleError {
+  let (left, right) = self.split(pos)
+  left.concat(elem).concat(right)
 }
 
 ///|
@@ -552,22 +526,13 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::delete(
   self : Runs[T],
   start~ : Int32,
   end~ : Int32,
-) -> Result[Runs[T], RleError] {
+) -> Runs[T] raise RleError {
   let total = self.span()
-  match range_check(start, end, total) {
-    Ok(_) => ()
-    Err(e) => return Err(e)
-  }
+  range_check(start, end, total)
   // Validate boundary even for empty ranges (e.g. surrogate pair interior)
-  let (left, rest) = match self.split(start) {
-    Ok(pair) => pair
-    Err(e) => return Err(e)
-  }
-  let (_, right) = match rest.split(end - start) {
-    Ok(pair) => pair
-    Err(e) => return Err(e)
-  }
-  Ok(left.concat(right))
+  let (left, rest) = self.split(start)
+  let (_, right) = rest.split(end - start)
+  left.concat(right)
 }
 
 ///|
@@ -577,21 +542,12 @@ pub fn[T : Sliceable + Spanning + Mergeable] Runs::splice(
   start~ : Int32,
   end~ : Int32,
   replacement : Runs[T],
-) -> Result[Runs[T], RleError] {
+) -> Runs[T] raise RleError {
   let total = self.span()
-  match range_check(start, end, total) {
-    Ok(_) => ()
-    Err(e) => return Err(e)
-  }
-  let (left, rest) = match self.split(start) {
-    Ok(pair) => pair
-    Err(e) => return Err(e)
-  }
-  let (_, right) = match rest.split(end - start) {
-    Ok(pair) => pair
-    Err(e) => return Err(e)
-  }
-  Ok(left.concat(replacement).concat(right))
+  range_check(start, end, total)
+  let (left, rest) = self.split(start)
+  let (_, right) = rest.split(end - start)
+  left.concat(replacement).concat(right)
 }
 
 ///|
@@ -599,28 +555,34 @@ fn range_check(
   start : Int32,
   end : Int32,
   total : Int32,
-) -> Result[Unit, RleError] {
+) -> Unit raise RleError {
   if start < 0 {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=NegativeStart),
+    raise RleError::InvalidRange(
+      start~,
+      end~,
+      length=total,
+      reason=NegativeStart,
     )
   }
   if end < 0 {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=NegativeEnd),
-    )
+    raise RleError::InvalidRange(start~, end~, length=total, reason=NegativeEnd)
   }
   if start > end {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=StartAfterEnd),
+    raise RleError::InvalidRange(
+      start~,
+      end~,
+      length=total,
+      reason=StartAfterEnd,
     )
   }
   if end > total {
-    return Err(
-      RleError::InvalidRange(start~, end~, length=total, reason=ExceedsLength),
+    raise RleError::InvalidRange(
+      start~,
+      end~,
+      length=total,
+      reason=ExceedsLength,
     )
   }
-  Ok(())
 }
 
 ///|

@@ -1,7 +1,6 @@
 import {
   "dowdiness/rle",
   "moonbitlang/core/builtin",
-  "moonbitlang/core/debug",
 }
 
 pkgtype(kind: "executable")

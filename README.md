@@ -6,9 +6,11 @@ Adjacent elements that can be merged are automatically compressed into single ru
 
 ## Compatibility
 
-This branch targets MoonBit 0.10.15 and QuickCheck 0.15.0. Earlier compiler versions are not supported.
+This branch targets the current MoonBit toolchain (verified with moonc v0.10.21 and moon 0.1.20261117) and QuickCheck 0.15.0. Earlier compiler versions are not supported. Update your toolchain before building; v0.10.14 does not recognize `Int32`.
 
 `Rle::extend` and `Runs::extend` were renamed to `extend_from` because `extend` is now a reserved keyword. Replace calls such as `a.extend(b)` with `a.extend_from(b)`; in-place mutation, boundary merging, cache invalidation, and cursor versioning are unchanged. Custom shrinking uses `moonbitlang/core/quickcheck/shrink.Shrink`.
+
+The fallible API now uses MoonBit's typed `raise` errors instead of returning `Result`; this is an intentional breaking change. Callers that previously matched or unwrapped results should call directly and either propagate errors from a `raise` function or handle them with `try`/`catch`. `find`, `get`, and cursor access remain `Option`-based.
 
 ## Install
 
@@ -23,35 +25,34 @@ moon add dowdiness/rle
 Strings implement all required traits out of the box, so you can start immediately:
 
 ```moonbit
-// Create from a string
-let rle = @rle.Rle::from_string("hello world")
+fn main raise {
+  // Create from a string
+  let rle = @rle.Rle::from_string("hello world")
 
-// Length and lookup
-rle.span() |> println   //=> 11
-match rle.find(6) {
-  Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
-  None => println("None")
+  // Length and lookup
+  rle.span() |> println   //=> 11
+  match rle.find(6) {
+    Some(pos) => println("Some({run: \{pos.run}, offset: \{pos.offset}})")
+    None => println("None")
+  }
+
+  // Append merges automatically (strings always merge)
+  let rle = @rle.Rle::Rle()
+  rle.append("hello")
+  rle.append(" world")
+  rle.length() |> println          //=> 1
+  rle.to_string() |> println       //=> "hello world"
+
+  // Split at any position
+  let (left, right) = rle.split(5)
+  left.to_string() |> println   //=> "hello"
+  right.to_string() |> println  //=> " world"
+
+  // Range iteration returns slices without copying
+  let slices = rle.range(start=1, end=4).collect()
+  let ell = slices[0].to_inner() //=> "ell"
+  println(ell)
 }
-
-// Append merges automatically (strings always merge)
-let rle = @rle.Rle::Rle()
-rle.append("hello") |> println   // Ok(())
-rle.append(" world") |> println  // Ok(()) — merged into one run
-rle.length() |> println          //=> 1
-rle.to_string() |> println       //=> "hello world"
-
-// Split at any position
-let (left, right) = rle.split(5).unwrap()
-left.to_string() |> println   //=> "hello"
-right.to_string() |> println  //=> " world"
-
-// Range iteration returns slices without copying
-let slices = rle.range(start=1, end=4).unwrap().collect()
-let ell = match slices[0].to_inner() {
-  Ok(value) => value  //=> "ell"
-  Err(_) => ""
-}
-println(ell)
 ```
 
 ### Batch Construction
@@ -69,22 +70,24 @@ rle.to_string()   //=> "abc"
 Insert, delete, and splice at any position:
 
 ```moonbit
-// Insert at position
-let rle = @rle.Rle::from_string("helo")
-let elem = @rle.Rle::from_string("l")
-let result = rle.insert(2, elem).unwrap()
-result.to_string()  //=> "hello"
+fn main raise {
+  // Insert at position
+  let rle = @rle.Rle::from_string("helo")
+  let elem = @rle.Rle::from_string("l")
+  let result = rle.insert(2, elem)
+  result.to_string()  //=> "hello"
 
-// Delete a range
-let rle = @rle.Rle::from_string("hello world")
-let result = rle.delete(start=5, end=6).unwrap()
-result.to_string()  //=> "helloworld"
+  // Delete a range
+  let rle = @rle.Rle::from_string("hello world")
+  let result = rle.delete(start=5, end=6)
+  result.to_string()  //=> "helloworld"
 
-// Splice: replace a range with new content
-let rle = @rle.Rle::from_string("hello world")
-let replacement = @rle.Rle::from_string("beautiful ")
-let result = rle.splice(start=6, end=11, replacement).unwrap()
-result.to_string()  //=> "hello beautiful "
+  // Splice: replace a range with new content
+  let rle = @rle.Rle::from_string("hello world")
+  let replacement = @rle.Rle::from_string("beautiful ")
+  let result = rle.splice(start=6, end=11, replacement)
+  result.to_string()  //=> "hello beautiful "
+}
 ```
 
 These operations produce **new** `Rle` values — the original is not modified.
@@ -213,15 +216,17 @@ impl @rle.Spanning for AuthoredRun with span(self) {
 
 // Sliceable: needed for split, insert, delete, splice.
 // Delegates to String's Sliceable impl for bounds and surrogate validation.
-impl @rle.Sliceable for AuthoredRun with slice(self, start~, end~) {
-  match @rle.Sliceable::slice(self.text, start~, end~) {
-    Ok(sliced) => Ok({ author: self.author, text: sliced })
-    Err(e) => Err(e)
-  }
+impl @rle.Sliceable for AuthoredRun with fn slice(
+  self : AuthoredRun,
+  start~ : Int32,
+  end~ : Int32,
+) -> AuthoredRun raise @rle.RleError {
+  let sliced = @rle.Sliceable::slice(self.text, start~, end~)
+  { author: self.author, text: sliced }
 }
 ```
 
-For types wrapping strings, delegate to `String`'s `Sliceable` impl which handles bounds checking and UTF-16 surrogate pair validation. For lower-level control, `slice_string_view` is also available and returns `SliceError` directly.
+For types wrapping strings, delegate to `String`'s `Sliceable` impl which handles bounds checking and UTF-16 surrogate pair validation. For lower-level control, `slice_string_view` is also available and raises `SliceError` directly.
 
 ### Implementing Mergeable: Contract
 
@@ -319,15 +324,27 @@ All cursor methods return `None` or `false` when stale. Create a new cursor afte
 
 ### Error Handling
 
-Operations return `Result[T, RleError]` with user-friendly messages:
+Fallible operations raise typed `RleError` values rather than returning
+`Result`. In a function that declares `raise`, errors propagate automatically.
+Handle a particular failure with a typed `try`/`catch`, while allowing
+unexpected variants to propagate:
 
 ```moonbit
-match rle.split(100) {
-  Ok((left, right)) => ...
-  Err(e) => println(e.message())
-  //=> "Position 100 is outside the document (length: 11)"
+fn split_or_report(rle : @rle.Rle[String]) -> Unit raise {
+  try {
+    let (left, right) = rle.split(100)
+    println(left.to_string() + right.to_string())
+  } catch {
+    @rle.RleError::PositionOutOfBounds(position~, length~) =>
+      println("Position \{position} is outside the document (length: \{length})")
+    error => raise error
+  }
 }
 ```
+
+`find`, `get`, and cursor access remain `Option`-based; they do not raise for
+missing positions or stale cursor data. Invalid user input raises a typed
+library error rather than panicking.
 
 Error types:
 - `PositionOutOfBounds` — position outside valid range
@@ -346,7 +363,7 @@ All string indices are in **UTF-16 code units**, not Unicode codepoints or graph
 | `"😀"` | 2 | Supplementary: 2 code units (surrogate pair) |
 | `"A😀B"` | 4 | 1 + 2 + 1 code units |
 
-Splitting or slicing inside a surrogate pair returns `Err(InvalidSlice(InvalidIndex))`. The library correctly rejects these invalid boundaries.
+Splitting or slicing inside a surrogate pair raises `RleError::InvalidSlice(InvalidIndex)`. The library correctly rejects these invalid boundaries.
 
 ## Performance
 

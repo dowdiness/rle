@@ -1,5 +1,5 @@
 ///|
-fn main {
+fn main raise {
   // Create from a string
   let rle = @rle.Rle::from_string("hello world")
 
@@ -12,22 +12,19 @@ fn main {
 
   // Append merges automatically (strings always merge)
   let rle = @rle.Rle::Rle()
-  rle.append("hello") |> @debug.debug // Ok(())
-  rle.append(" world") |> @debug.debug // Ok(()) — merged into one run
+  rle.append("hello") // Append succeeds
+  rle.append(" world") // merged into one run
   rle.length() |> println //=> 1
   rle.to_string() |> println //=> "hello world"
 
   // Split at any position
-  let (left, right) = rle.split(5).unwrap()
+  let (left, right) = rle.split(5)
   left.to_string() |> println //=> "hello"
   right.to_string() |> println //=> " world"
 
   // Range iteration returns slices without copying
-  let slices = rle.range(start=1, end=4).unwrap().collect()
-  let ell = match slices[0].to_inner() {
-    Ok(value) => value //=> "ell"
-    Err(_) => ""
-  }
+  let slices = rle.range(start=1, end=4).collect()
+  let ell = slices[0].to_inner() //=> "ell"
   println(ell)
 
   let rle = @rle.Rle::from_array(["a", "", "b", "", "c"])
@@ -39,7 +36,7 @@ fn main {
 
 ///|
 /// Cursors track their position and detect mutations:
-fn cursor() -> Unit {
+fn cursor() -> Unit raise @rle.RleError {
   let rle = @rle.Rle::from_string("abcdef")
   let cursor = rle.cursor()
 
@@ -54,7 +51,7 @@ fn cursor() -> Unit {
   }
 
   // Mutation invalidates the cursor
-  rle.append("ghi") |> @debug.debug
+  rle.append("ghi")
   cursor.is_stale() |> println //=> true
   match cursor.next() {
     Some(item) => println("Some(\"\{item}\")")

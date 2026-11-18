@@ -10,7 +10,8 @@ import {
 // Errors
 
 // Types and methods
-type PixelRun derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type PixelRun
 
 // Type aliases
 

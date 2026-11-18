@@ -47,10 +47,7 @@ test "runs - range iter (small)" (b : @bench.T) {
   let start = 0
   let end = 400
   b.bench(fn() {
-    let it = match runs.range(start~, end~) {
-      Ok(it) => it
-      Err(_) => abort("range failed")
-    }
+    let it = try! runs.range(start~, end~)
     b.keep(it.count())
   })
 }
@@ -63,10 +60,7 @@ test "runs - range iter (middle)" (b : @bench.T) {
   let start = total / 2
   let end = start + 400
   b.bench(fn() {
-    let it = match runs.range(start~, end~) {
-      Ok(it) => it
-      Err(_) => abort("range failed")
-    }
+    let it = try! runs.range(start~, end~)
     b.keep(it.count())
   })
 }

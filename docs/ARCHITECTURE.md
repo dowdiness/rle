@@ -115,7 +115,15 @@ Sequential traversal cursor that captures `rle.version` at creation.
 pub struct Slice[T] { value: T, start: Int, end: Int }
 ```
 
-A lazy view — stores bounds without materializing the sub-range. Call `to_inner()` to allocate the sliced value. This enables zero-copy range iteration.
+A lazy view — stores bounds without materializing the sub-range. Call `to_inner()` to allocate the sliced value; invalid bounds raise a typed error. This enables zero-copy range iteration until materialization.
+
+## Error Handling
+
+Fallible APIs use MoonBit's checked, typed `raise` errors rather than `Result`
+returns. Errors propagate automatically through callers that can raise, or can
+be handled with `try`/`catch`. Invalid user input is reported as `RleError`
+variants rather than causing a panic. Optional lookup APIs (`find`, `get`, and
+cursor access) remain `Option`-based.
 
 ## Supporting Files
 
